@@ -30,11 +30,11 @@ if (!empty($_SESSION['user_id'])) {
     </div>
 
     <div class="step-indicator">
-      <span></span><span></span><span></span>
+      <span class="active"></span><span></span><span></span>
     </div>
 
     <!-- STEP 1: email -->
-    <section class="step" data-step="email">
+    <section class="step active" data-step="email">
       <h1>Reset your password</h1>
       <p class="subtitle">Enter your UMak email to receive a code</p>
       <form id="fp-email-form" novalidate>

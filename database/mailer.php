@@ -1,16 +1,12 @@
 <?php
 declare(strict_types=1);
 
-/**
- * Email API integration point.
- *
- * Swap the body of send_totp_email() for a real provider (PHPMailer +
- * SMTP, SendGrid, Mailgun, etc. — see README "Wiring the API integrations").
- * DEV_MODE writes the code to error_log so you can test the whole login
- * flow on localhost without configuring real SMTP credentials yet.
- */
+require_once __DIR__ . '/../vendor/autoload.php';
 
-const MAIL_DEV_MODE = true; // set to false once a real provider is wired in
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+const MAIL_DEV_MODE = false; // Set to false for real SMTP delivery
 
 function send_totp_email(string $toEmail, string $code): void {
     if (MAIL_DEV_MODE) {
@@ -18,19 +14,46 @@ function send_totp_email(string $toEmail, string $code): void {
         return;
     }
 
-    // Example using PHPMailer (composer require phpmailer/phpmailer):
-    //
-    // $mail = new PHPMailer\PHPMailer\PHPMailer(true);
-    // $mail->isSMTP();
-    // $mail->Host       = 'smtp.yourprovider.com';
-    // $mail->SMTPAuth   = true;
-    // $mail->Username   = 'YOUR_SMTP_USER';
-    // $mail->Password   = 'YOUR_SMTP_PASSWORD';
-    // $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-    // $mail->Port       = 587;
-    // $mail->setFrom('security@umak.edu.ph', 'Retrieva Security Desk');
-    // $mail->addAddress($toEmail);
-    // $mail->Subject = 'Your Retrieva verification code';
-    // $mail->Body    = "Your 6-digit code is: {$code} (expires in 5 minutes)";
-    // $mail->send();
+    $mail = new PHPMailer(true);
+
+    try {
+        // Google SMTP Configuration (Port 465 SSL)
+        $mail->isSMTP();
+        $mail->Host       = 'smtp.gmail.com';
+        $mail->SMTPAuth   = true;
+        $mail->Username   = 'jangeles.a12345431@umak.edu.ph'; 
+        $mail->Password   = 'nmwldcmiulyfdqjk'; // Google App Password
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        $mail->Port       = 465;
+
+        // Bypass local XAMPP OpenSSL certificate path issues
+        $mail->SMTPOptions = [
+            'ssl' => [
+                'verify_peer'       => false,
+                'verify_peer_name'  => false,
+                'allow_self_signed' => true
+            ]
+        ];
+
+        // Sender and Recipient
+        $mail->setFrom('jangeles.a12345431@umak.edu.ph', 'Retrieva Security Desk');
+        $mail->addAddress($toEmail);
+
+        // Content
+        $mail->isHTML(true);
+        $mail->Subject = 'Your Retrieva Security Verification Code';
+        $mail->Body    = "
+            <div style='font-family: Arial, sans-serif; padding: 20px;'>
+                <h2>Retrieva Security Gateway</h2>
+                <p>Your 6-digit verification code is:</p>
+                <h1 style='letter-spacing: 4px; color: #1a56db;'>{$code}</h1>
+                <p>This code expires in 5 minutes. Do not share this code with anyone.</p>
+            </div>
+        ";
+
+        $mail->send();
+    } catch (Exception $e) {
+        error_log("SMTP Error: " . $mail->ErrorInfo);
+        throw $e; // Rethrow so forgot_password.php can log the exact failure
+    }
 }

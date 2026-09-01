@@ -9,7 +9,6 @@ $input = json_decode(file_get_contents('php://input'), true) ?? [];
 
 $password        = (string)($input['password'] ?? '');
 $confirmPassword = (string)($input['confirm_password'] ?? '');
-$skipNextTime     = !empty($input['skip_next_time']); // "don't ask again" checkbox
 
 if (strlen($password) < 8) {
     json_out(['success' => false, 'message' => 'Password must be at least 8 characters.'], 400);
@@ -30,10 +29,10 @@ $hash = password_hash($password, PASSWORD_BCRYPT);
 
 $stmt = get_db()->prepare(
     'UPDATE users
-     SET password_hash = ?, password_is_set = 1, skip_password_prompt = ?, auth_provider = "local"
+     SET password_hash = ?, password_is_set = 1, auth_provider = "local"
      WHERE id = ?'
 );
-$stmt->execute([$hash, $skipNextTime ? 1 : 0, $userId]);
+$stmt->execute([$hash, $userId]);
 
 log_audit((int)$userId, 'password_set', 'Password created/updated by user.');
 

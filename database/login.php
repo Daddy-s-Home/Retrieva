@@ -15,37 +15,97 @@ if ($email === '' || $password === '') {
     json_out(['success' => false, 'message' => 'Email and password are required.'], 400);
 }
 
-$stmt = get_db()->prepare('SELECT * FROM users WHERE email = ?');
+$db = get_db();
+$stmt = $db->prepare('SELECT * FROM users WHERE email = ?');
 $stmt->execute([$email]);
 $user = $stmt->fetch();
 
-// Same generic message whether the email is unknown or the password is
-// wrong, so login can't be used to enumerate valid campus emails.
 $invalidMsg = 'Incorrect email or password.';
 
-if (!$user || $user['auth_provider'] !== 'local' || !$user['password_hash']) {
-    json_out(['success' => false, 'message' => $invalidMsg], 401);
-}
-if ($user['status'] === 'blocked') {
-    json_out(['success' => false, 'message' => 'This account has been blocked. Contact the security office.'], 403);
-}
-if (!password_verify($password, $user['password_hash'])) {
+if (!$user) {
+    log_audit(null, 'login_failed', "Unknown account login attempt for email: {$email}");
     json_out(['success' => false, 'message' => $invalidMsg], 401);
 }
 
-// Password is correct -> issue a fresh TOTP code for the second factor.
+// 1. Admin manual block check
+if ($user['status'] === 'blocked') {
+    log_audit((int)$user['id'], 'login_blocked', 'Blocked user login attempt');
+    json_out(['success' => false, 'message' => 'This account has been blocked. Contact the security office.'], 403);
+}
+
+// 2. Active lockout check
+if (!empty($user['lockout_until'])) {
+    $lockoutTime = strtotime($user['lockout_until']);
+    $currentTime = time();
+
+    if ($currentTime < $lockoutTime) {
+        $remainingSeconds = $lockoutTime - $currentTime;
+        log_audit((int)$user['id'], 'login_lockout_rejected', "Attempt while account locked ({$remainingSeconds}s remaining)");
+        
+        json_out([
+            'success'           => false,
+            'locked'            => true,
+            'remaining_seconds' => $remainingSeconds,
+            'message'           => 'Too many failed login attempts. Your account is temporarily locked.'
+        ], 429);
+    } else {
+        // Lockout period has elapsed; reset counters
+        $db->prepare('UPDATE users SET failed_attempts = 0, lockout_until = NULL WHERE id = ?')
+           ->execute([$user['id']]);
+        $user['failed_attempts'] = 0;
+    }
+}
+
+// 3. Password verification
+if ($user['auth_provider'] !== 'local' || !$user['password_hash'] || !password_verify($password, $user['password_hash'])) {
+    $failedAttempts = ((int)($user['failed_attempts'] ?? 0)) + 1;
+    
+    if ($failedAttempts >= 5) {
+        // 5 failures reach limit -> lock for 15 minutes (900s)
+        $lockoutUntil = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+        $db->prepare('UPDATE users SET failed_attempts = ?, lockout_until = ? WHERE id = ?')
+           ->execute([$failedAttempts, $lockoutUntil, $user['id']]);
+        
+        log_audit((int)$user['id'], 'account_locked', 'Account locked for 15 minutes due to 5 consecutive failed login attempts.');
+        
+        json_out([
+            'success'           => false,
+            'locked'            => true,
+            'remaining_seconds' => 900,
+            'message'           => 'Too many failed attempts. Account locked for 15 minutes.'
+        ], 429);
+    } else {
+        $db->prepare('UPDATE users SET failed_attempts = ? WHERE id = ?')
+           ->execute([$failedAttempts, $user['id']]);
+        
+        $remainingTries = 5 - $failedAttempts;
+        log_audit((int)$user['id'], 'login_failed', "Invalid password attempt ({$failedAttempts}/5)");
+        
+        json_out([
+            'success' => false,
+            'message' => "{$invalidMsg} ({$remainingTries} attempt" . ($remainingTries > 1 ? 's' : '') . " remaining)"
+        ], 401);
+    }
+}
+
+// 4. Successful login -> reset counters & generate TOTP
+$db->prepare('UPDATE users SET failed_attempts = 0, lockout_until = NULL WHERE id = ?')
+   ->execute([$user['id']]);
+
 $secret = totp_generate_secret();
 $code   = totp_code($secret);
 
-$db = get_db();
 $db->prepare('UPDATE users SET totp_secret = ? WHERE id = ?')->execute([$secret, $user['id']]);
 $db->prepare(
     'INSERT INTO totp_challenges (user_id, code_hash, purpose, expires_at) VALUES (?, ?, "login", DATE_ADD(NOW(), INTERVAL 5 MINUTE))'
 )->execute([$user['id'], password_hash($code, PASSWORD_BCRYPT)]);
 
-send_totp_email($user['email'], $code); // see mailer.php — wire in your Email API here
+try {
+    send_totp_email($user['email'], $code);
+} catch (Throwable $e) {
+    error_log("Failed to dispatch TOTP email: " . $e->getMessage());
+}
 
-// Stash a pending-login marker; the real session is only granted after TOTP succeeds.
 $_SESSION['pending_totp_user_id'] = $user['id'];
 
 log_audit((int)$user['id'], 'login_password_ok', 'Password verified, TOTP sent.');

@@ -8,8 +8,11 @@ start_session();
 
 $provider = get_google_provider();
 
+// Force Google to prompt for account selection and credentials every time
 $authUrl = $provider->getAuthorizationUrl([
-    'scope' => ['openid', 'email', 'profile'],
+    'scope'   => ['openid', 'email', 'profile'],
+    'prompt'  => 'select_account consent',
+    'max_age' => 0,
 ]);
 
 // CSRF protection — verified against the same session in the callback.

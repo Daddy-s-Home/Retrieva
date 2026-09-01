@@ -26,7 +26,12 @@ if ($user) {
         'INSERT INTO totp_challenges (user_id, code_hash, purpose, expires_at) VALUES (?, ?, "password_reset", DATE_ADD(NOW(), INTERVAL 5 MINUTE))'
     )->execute([$user['id'], password_hash($code, PASSWORD_BCRYPT)]);
 
-    send_totp_email($user['email'], $code);
+    try {
+        send_totp_email($user['email'], $code);
+    } catch (Throwable $e) {
+        error_log("Failed to dispatch password reset TOTP email: " . $e->getMessage());
+    }
+
     $_SESSION['pending_reset_user_id'] = $user['id'];
 }
 

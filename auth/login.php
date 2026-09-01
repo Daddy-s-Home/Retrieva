@@ -19,48 +19,67 @@ if (!empty($_SESSION['user_id'])) {
 <link rel="stylesheet" href="../assets/theme.css">
 <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="login-page">
 
 <main class="gateway">
-  <div class="gateway__badge">Secure Campus Gateway</div>
-
-  <div class="auth-card">
-    <div class="auth-card__brand">
-      <img src="../assets/icons/logo.svg" alt="" width="32" height="32">
-      <span>Retrieva</span>
-    </div>
-    <h1>Welcome back</h1>
-    <p class="subtitle">Sign in with your official UMak account</p>
-
-    <form id="login-form">
-      <div class="field">
-        <label for="email">UMak email</label>
-        <input type="email" id="email" name="email" placeholder="juan.delacruz@umak.edu.ph" required autocomplete="username">
+  <div class="auth-layout">
+    <section class="auth-visual" aria-label="Retrieva lost and found">
+      <img src="../assets/icons/login.png" alt="University of Makati campus and a box of found items" onerror="this.hidden=true">
+      <div class="auth-visual__overlay">
+        <p class="auth-visual__eyebrow">University of Makati</p>
+        <h2>Find what matters.<br>Return what’s found.</h2>
+        <p>Retrieva connects the UMak community with the things they thought they had lost.</p>
       </div>
-      <div class="field">
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+    </section>
+
+    <section class="auth-card" aria-labelledby="login-heading">
+      <div class="auth-card__brand">
+        <img src="../assets/icons/logo.svg" alt="" width="100" height="100">
+        <div>
+          <strong>RETRIEVA</strong>
+          <span>LOST &amp; FOUND SYSTEM</span>
+        </div>
       </div>
-      <div class="link-row">
-        <a href="forgot-password.php">Forgot password?</a>
-      </div>
-      <button type="submit" class="btn btn-primary">Sign In</button>
-    </form>
+      <h1 id="login-heading">Welcome Back!</h1>
+      <p class="subtitle">Sign in to continue to your account</p>
 
-    <div class="divider">or continue with</div>
+      <form id="login-form">
+        <div class="field">
+          <label for="email">Email Address</label>
+          <div class="input-wrap">
+            <span class="input-icon" aria-hidden="true">&#9993;</span>
+            <input type="email" id="email" name="email" placeholder="Enter your email" required autocomplete="username">
+          </div>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="input-wrap password-field-wrapper">
+            <span class="input-icon" aria-hidden="true">&#128274;</span>
+            <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password">
+            <button type="button" id="toggle-password" class="toggle-password-btn" aria-label="Toggle password visibility">
+              <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="login-options">
+          <label class="remember-me"><input type="checkbox" name="remember"> <span>Remember me</span></label>
+          <a href="forgot-password.php">Forgot Password?</a>
+        </div>
+        <button type="submit" class="btn btn-primary">Sign In</button>
+      </form>
 
-    <!-- Server-side OAuth flow (league/oauth2-google via Composer) —
-         this just sends the browser to Google's consent screen. -->
-    <a href="../database/google_oauth_redirect.php" class="btn-oauth">
-      <img src="../assets/icons/google-icon.svg" alt=""> Continue with Google
-    </a>
+      <div class="divider">or continue with</div>
 
-    <p class="auth-card__footer-note">
-      New here? Just sign in with your <img src="../assets/icons/umak-icon.svg" alt="UMak" width="14" height="14" style="display:inline;vertical-align:-2px;"> @umak.edu.ph Google account — an account is created automatically.
-    </p>
+      <a href="../database/google_oauth_redirect.php" class="btn-oauth">
+        <img src="../assets/icons/google-icon.svg" alt=""> Sign in with Google
+      </a>
+
+      <p class="auth-card__footer-note">Don’t have an account? <a href="../database/google_oauth_redirect.php">Register here</a></p>
+    </section>
   </div>
-
-  <p class="gateway__footer">© 2026 Retrieva System. All rights reserved. &nbsp;|&nbsp; UMak Security Division</p>
 </main>
 
 <script src="auth.js"></script>

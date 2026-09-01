@@ -124,9 +124,15 @@ function require_role_page(array $allowed_roles, string $forbiddenPath = '../das
     return $session;
 }
 
-function log_audit(int $user_id, string $action, string $details = ''): void {
+function log_audit(?int $user_id, string $action, string $details = ''): void {
     $stmt = get_db()->prepare(
-        'INSERT INTO audit_trail (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)'
+        'INSERT INTO audit_trail (user_id, action, details, ip_address, user_agent) VALUES (?, ?, ?, ?, ?)'
     );
-    $stmt->execute([$user_id, $action, $details, $_SERVER['REMOTE_ADDR'] ?? null]);
+    $stmt->execute([
+        $user_id, 
+        $action, 
+        $details, 
+        $_SERVER['REMOTE_ADDR'] ?? null,
+        $_SERVER['HTTP_USER_AGENT'] ?? null
+    ]);
 }
