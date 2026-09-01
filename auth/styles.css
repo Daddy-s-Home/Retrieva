@@ -199,9 +199,25 @@
     radial-gradient(circle at 18% 18%, rgba(104, 190, 239, .18), transparent 32%),
     radial-gradient(circle at 88% 82%, rgba(245, 166, 35, .12), transparent 30%),
     #f2f6fc;
+  isolation: isolate;
+}
+
+.login-page .auth-particles {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.login-page .auth-particles canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .login-page .auth-layout {
+  position: relative;
+  z-index: 1;
   width: min(1080px, 100%);
   min-height: 690px;
   display: grid;
@@ -410,6 +426,12 @@
   }
   .login-page .auth-layout .auth-card {
     padding: 42px 28px 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-page .auth-particles {
+    display: none;
   }
 }
 

@@ -22,6 +22,8 @@ if (!empty($_SESSION['user_id'])) {
 <body class="login-page">
 
 <main class="gateway">
+  <div id="auth-particles" class="auth-particles" aria-hidden="true"></div>
+
   <div class="auth-layout">
     <section class="auth-visual" aria-label="Retrieva lost and found">
       <img src="../assets/icons/login.png" alt="University of Makati campus and a box of found items" onerror="this.hidden=true">
@@ -82,6 +84,8 @@ if (!empty($_SESSION['user_id'])) {
   </div>
 </main>
 
+<script src="../assets/effects/particles/particles.min.js"></script>
+<script src="../assets/effects/particles/auth-particles.js"></script>
 <script src="auth.js"></script>
 </body>
 </html>
