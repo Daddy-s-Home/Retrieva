@@ -47,6 +47,14 @@ function start_session(): void {
     }
 }
 
+/** True when a session key holds a numeric id, including 0. */
+function session_id_present(string $key): bool {
+    if (!isset($_SESSION[$key]) || $_SESSION[$key] === '' || $_SESSION[$key] === null) {
+        return false;
+    }
+    return is_numeric($_SESSION[$key]);
+}
+
 /** Escapes nullable view values for safe HTML output. */
 function h(?string $value): string {
     return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
@@ -85,7 +93,7 @@ function json_out(array $payload, int $code = 200): void {
 /** Quick guard for endpoints that require an authenticated session. */
 function require_login(): array {
     start_session();
-    if (empty($_SESSION['user_id'])) {
+    if (!session_id_present('user_id')) {
         json_out(['success' => false, 'message' => 'Not authenticated.'], 401);
     }
     return $_SESSION;
@@ -107,10 +115,16 @@ function require_role(array $allowed_roles): array {
  */
 function require_login_page(string $loginPath = '../auth/login.php'): array {
     start_session();
-    if (empty($_SESSION['user_id'])) {
+    // #region agent log
+    file_put_contents('C:/xampp/htdocs/debug-5b3ba5.log', json_encode(['sessionId'=>'5b3ba5','hypothesisId'=>'D','location'=>'db.php:require_login_page','message'=>'dashboard session gate','data'=>['userId'=>$_SESSION['user_id'] ?? null,'userEmpty'=>empty($_SESSION['user_id'])],'timestamp'=>(int) round(microtime(true)*1000)])."\n", FILE_APPEND);
+    // #endregion
+    if (!session_id_present('user_id')) {
         header('Location: ' . $loginPath);
         exit;
     }
+    // #region agent log
+    file_put_contents('C:/xampp/htdocs/debug-5b3ba5.log', json_encode(['sessionId'=>'5b3ba5','runId'=>'post-fix','hypothesisId'=>'D','location'=>'db.php:require_login_page','message'=>'dashboard session allowed','data'=>['userId'=>$_SESSION['user_id']],'timestamp'=>(int) round(microtime(true)*1000)])."\n", FILE_APPEND);
+    // #endregion
     return $_SESSION;
 }
 
@@ -122,6 +136,21 @@ function require_role_page(array $allowed_roles, string $forbiddenPath = '../das
         exit;
     }
     return $session;
+}
+
+/** Assigns LR-/F-/CL- public codes after an insert. Table names are whitelisted. */
+function assign_public_code(string $table, int $id): void {
+    $prefixes = [
+        'lost_items' => 'LR',
+        'found_items' => 'F',
+        'claims' => 'CL',
+    ];
+    if ($id < 1 || !isset($prefixes[$table])) {
+        return;
+    }
+    $code = $prefixes[$table] . '-' . date('Y') . '-' . str_pad((string) $id, 3, '0', STR_PAD_LEFT);
+    $stmt = get_db()->prepare("UPDATE {$table} SET public_code = ? WHERE id = ? AND (public_code IS NULL OR public_code = '')");
+    $stmt->execute([$code, $id]);
 }
 
 function log_audit(?int $user_id, string $action, string $details = ''): void {

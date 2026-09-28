@@ -1,0 +1,18 @@
+.admin-shell .sidebar__nav { overflow: auto; }
+.admin-table-wrap { overflow: auto; background: #fff; border: 1px solid var(--c-border); border-radius: 16px; }
+.admin-table { width: 100%; border-collapse: collapse; }
+.admin-table th, .admin-table td { text-align: left; padding: 12px; border-bottom: 1px solid var(--c-border); vertical-align: top; }
+.admin-table th { font-size: 12px; color: var(--c-text-muted); }
+.match-card ul { margin: 8px 0 12px; }
+.stack-form { display: grid; gap: 10px; }
+.admin-shell .settings-feedback { min-height: 1.2em; }
+.admin-shell .settings-feedback.is-success { color: var(--c-success); }
+.admin-shell .settings-feedback.is-error { color: var(--c-danger); }
+.admin-shell .settings-totp-panel { margin-top: 12px; }
+.admin-shell .settings-totp-panel[hidden] { display: none; }
+#admin-trend-chart, #admin-category-chart, #reports-trend-chart, #reports-category-chart { width: 100%; max-height: 280px; }
+.export-links { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.report-charts { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+@media (max-width: 900px) {
+  .report-charts { grid-template-columns: 1fr; }
+}

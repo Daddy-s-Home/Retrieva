@@ -23,6 +23,9 @@ $user = $stmt->fetch();
 $invalidMsg = 'Incorrect email or password.';
 
 if (!$user) {
+    // #region agent log
+    file_put_contents('C:/xampp/htdocs/debug-5b3ba5.log', json_encode(['sessionId'=>'5b3ba5','hypothesisId'=>'E','location'=>'login.php:user','message'=>'account lookup','data'=>['found'=>false,'passwordLength'=>strlen($password)],'timestamp'=>(int) round(microtime(true)*1000)])."\n", FILE_APPEND);
+    // #endregion
     log_audit(null, 'login_failed', "Unknown account login attempt for email: {$email}");
     json_out(['success' => false, 'message' => $invalidMsg], 401);
 }
@@ -57,7 +60,11 @@ if (!empty($user['lockout_until'])) {
 }
 
 // 3. Password verification
-if ($user['auth_provider'] !== 'local' || !$user['password_hash'] || !password_verify($password, $user['password_hash'])) {
+$passwordOk = $user['auth_provider'] === 'local' && !empty($user['password_hash']) && password_verify($password, $user['password_hash']);
+// #region agent log
+file_put_contents('C:/xampp/htdocs/debug-5b3ba5.log', json_encode(['sessionId'=>'5b3ba5','hypothesisId'=>'B','location'=>'login.php:password','message'=>'password check','data'=>['found'=>true,'id'=>(int)$user['id'],'idEmpty'=>empty($user['id']),'passwordOk'=>$passwordOk,'passwordLength'=>strlen($password),'factor'=>($user['login_method'] ?? 'email')],'timestamp'=>(int) round(microtime(true)*1000)])."\n", FILE_APPEND);
+// #endregion
+if (!$passwordOk) {
     $failedAttempts = ((int)($user['failed_attempts'] ?? 0)) + 1;
     
     if ($failedAttempts >= 5) {
@@ -88,14 +95,23 @@ if ($user['auth_provider'] !== 'local' || !$user['password_hash'] || !password_v
     }
 }
 
-// 4. Successful login -> reset counters & generate TOTP
+// 4. Successful password check. Email codes live only in totp_challenges so an
+// authenticator secret already stored on the account is left in place.
 $db->prepare('UPDATE users SET failed_attempts = 0, lockout_until = NULL WHERE id = ?')
    ->execute([$user['id']]);
 
+$useAuthenticator = ($user['login_method'] ?? 'email') === 'totp' && (int) $user['totp_enabled'] === 1;
+$_SESSION['pending_totp_user_id'] = $user['id'];
+$_SESSION['pending_login_factor'] = $useAuthenticator ? 'totp' : 'email';
+$_SESSION['pending_login_can_switch'] = (int) $user['totp_enabled'] === 1;
+
+if ($useAuthenticator) {
+    log_audit((int)$user['id'], 'login_password_ok', 'Password verified, authenticator code requested.');
+    json_out(['success' => true, 'factor' => 'totp', 'message' => 'Enter the 6-digit code from your authenticator app.']);
+}
+
 $secret = totp_generate_secret();
 $code   = totp_code($secret);
-
-$db->prepare('UPDATE users SET totp_secret = ? WHERE id = ?')->execute([$secret, $user['id']]);
 $db->prepare(
     'INSERT INTO totp_challenges (user_id, code_hash, purpose, expires_at) VALUES (?, ?, "login", DATE_ADD(NOW(), INTERVAL 5 MINUTE))'
 )->execute([$user['id'], password_hash($code, PASSWORD_BCRYPT)]);
@@ -106,8 +122,6 @@ try {
     error_log("Failed to dispatch TOTP email: " . $e->getMessage());
 }
 
-$_SESSION['pending_totp_user_id'] = $user['id'];
+log_audit((int)$user['id'], 'login_password_ok', 'Password verified, email code sent.');
 
-log_audit((int)$user['id'], 'login_password_ok', 'Password verified, TOTP sent.');
-
-json_out(['success' => true, 'message' => 'Enter the 6-digit code sent to your email.']);
+json_out(['success' => true, 'factor' => 'email', 'message' => 'Enter the 6-digit code sent to your email.']);

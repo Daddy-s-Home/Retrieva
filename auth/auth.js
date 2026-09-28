@@ -243,6 +243,26 @@ function initTotpForm() {
     if (code.length === 6) submitCode(code);
   });
 
+  document.getElementById('resend-code')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    const res = await postJSON(`${API}/switch_login_factor.php`, { factor: 'email' });
+    button.disabled = false;
+    showToast(res.success ? 'A new code was sent to your email.' : (res.message || 'The code could not be sent.'), res.success ? 'success' : 'error');
+  });
+
+  document.getElementById('switch-factor')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    const res = await postJSON(`${API}/switch_login_factor.php`, { factor: button.dataset.factor });
+    if (res.success) {
+      window.location.reload();
+      return;
+    }
+    button.disabled = false;
+    showToast(res.message || 'That sign-in code is not available.', 'error');
+  });
+
   boxes[0].focus();
 }
 

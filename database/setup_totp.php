@@ -10,10 +10,16 @@ $db = get_db();
 if ($action === 'start') {
     $secret = totp_generate_secret();
     $_SESSION['pending_totp_setup_secret'] = $secret;
+    $db->prepare('UPDATE users SET totp_secret = ?, totp_enabled = 0 WHERE id = ?')->execute([$secret, $session['user_id']]);
     json_out(['success' => true, 'secret' => $secret]);
 }
 if ($action === 'verify') {
     $secret = (string)($_SESSION['pending_totp_setup_secret'] ?? '');
+    if ($secret === '') {
+        $stored = $db->prepare('SELECT totp_secret FROM users WHERE id = ?');
+        $stored->execute([$session['user_id']]);
+        $secret = (string) ($stored->fetchColumn() ?: '');
+    }
     $code = trim((string)($input['code'] ?? ''));
     if ($secret === '' || !preg_match('/^\d{6}$/', $code) || !totp_verify($secret, $code)) json_out(['success' => false, 'message' => 'That authenticator code is invalid or expired.'], 400);
     $stmt = $db->prepare('UPDATE users SET totp_secret = ?, totp_enabled = 1 WHERE id = ?');

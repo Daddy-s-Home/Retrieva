@@ -18,11 +18,25 @@ $userId = $purpose === 'password_reset'
     ? ($_SESSION['pending_reset_user_id'] ?? null)
     : ($_SESSION['pending_totp_user_id'] ?? null);
 
-if (!$userId) {
+// #region agent log
+file_put_contents('C:/xampp/htdocs/debug-5b3ba5.log', json_encode(['sessionId'=>'5b3ba5','hypothesisId'=>'C','location'=>'totp_verify.php:user','message'=>'verify gate','data'=>['userId'=>$userId,'userIdFalsy'=>!$userId],'timestamp'=>(int) round(microtime(true)*1000)])."\n", FILE_APPEND);
+// #endregion
+if ($userId === null || $userId === '' || !is_numeric($userId)) {
     json_out(['success' => false, 'message' => 'Session expired — please start again.'], 401);
 }
 
 $db = get_db();
+$factor = $_SESSION['pending_login_factor'] ?? 'email';
+
+if ($purpose === 'login' && $factor === 'totp') {
+    $user = $db->prepare('SELECT id, role, full_name, totp_secret, totp_enabled FROM users WHERE id = ?');
+    $user->execute([$userId]);
+    $u = $user->fetch();
+    if (!$u || (int) $u['totp_enabled'] !== 1 || !totp_verify((string) $u['totp_secret'], $code)) {
+        json_out(['success' => false, 'message' => 'Incorrect or expired code.'], 401);
+    }
+    retrieva_start_login_session($db, $u);
+}
 
 $stmt = $db->prepare(
     'SELECT * FROM totp_challenges
@@ -39,18 +53,10 @@ if (!$challenge || !password_verify($code, $challenge['code_hash'])) {
 $db->prepare('UPDATE totp_challenges SET consumed_at = NOW() WHERE id = ?')->execute([$challenge['id']]);
 
 if ($purpose === 'login') {
-    // Promote the pending login into a real authenticated session.
     $user = $db->prepare('SELECT id, role, full_name FROM users WHERE id = ?');
     $user->execute([$userId]);
     $u = $user->fetch();
-
-    $_SESSION['user_id'] = $u['id'];
-    $_SESSION['role']    = $u['role'];
-    $_SESSION['name']    = $u['full_name'];
-    unset($_SESSION['pending_totp_user_id']);
-
-    log_audit((int)$userId, 'login_success', 'TOTP verified, session started.');
-    json_out(['success' => true, 'redirect' => '../dashboard/index.php']);
+    retrieva_start_login_session($db, $u);
 }
 
 // password_reset purpose: hand off to forgot-password.php's step 3
@@ -59,3 +65,13 @@ unset($_SESSION['pending_reset_user_id']);
 $_SESSION['reset_user_id'] = $userId;
 
 json_out(['success' => true, 'redirect' => 'forgot-password.php?step=reset']);
+
+function retrieva_start_login_session(PDO $db, array $u): void {
+    $_SESSION['user_id'] = $u['id'];
+    $_SESSION['role']    = $u['role'];
+    $_SESSION['name']    = $u['full_name'];
+    unset($_SESSION['pending_totp_user_id'], $_SESSION['pending_login_factor'], $_SESSION['pending_login_can_switch']);
+    $db->prepare('UPDATE users SET email_verified = 1, last_login_at = NOW() WHERE id = ?')->execute([(int) $u['id']]);
+    log_audit((int) $u['id'], 'login_success', 'Sign-in code verified, session started.');
+    json_out(['success' => true, 'redirect' => '../dashboard/index.php']);
+}

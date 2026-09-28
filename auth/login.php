@@ -5,7 +5,7 @@ require_once __DIR__ . '/../database/db.php';
 start_session();
 
 // Already signed in? Skip straight to the dashboard.
-if (!empty($_SESSION['user_id'])) {
+if (session_id_present('user_id')) {
     header('Location: ../dashboard/index.php');
     exit;
 }
