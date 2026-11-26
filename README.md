@@ -10,7 +10,7 @@
 
 ### 1.1 System Overview
 
-**Retrieva** is the official web-based Campus Lost and Found Platform designed for the **University of Makati (UMak)**. It centralizes how lost-item reports, found-item logs, ownership claims, and item pickups are recorded, verified, and tracked across campus.
+**Retrieva** is a prototype web-based Campus Lost and Found Platform designed for the **University of Makati (UMak)**. It centralizes how lost-item reports, found-item logs, ownership claims, and item pickups are recorded, verified, and tracked across campus.
 
 The platform follows a structured end-to-end workflow:
 
