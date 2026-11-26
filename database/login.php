@@ -3,16 +3,23 @@ declare(strict_types=1);
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/totp_helper.php';
 require_once __DIR__ . '/mailer.php';
+require_once __DIR__ . '/notify_helper.php';
+require_once __DIR__ . '/recaptcha_helper.php';
 
 start_session();
 header('Content-Type: application/json');
 
-$input    = json_decode(file_get_contents('php://input'), true) ?? [];
-$email    = trim((string)($input['email'] ?? ''));
-$password = (string)($input['password'] ?? '');
+$input          = json_decode(file_get_contents('php://input'), true) ?? [];
+$email          = trim((string)($input['email'] ?? ''));
+$password       = (string)($input['password'] ?? '');
+$recaptchaToken = (string)($input['recaptcha_token'] ?? '');
 
 if ($email === '' || $password === '') {
     json_out(['success' => false, 'message' => 'Email and password are required.'], 400);
+}
+
+if (!verify_recaptcha_token($recaptchaToken)) {
+    json_out(['success' => false, 'message' => 'reCAPTCHA verification failed. Please complete the checkbox and try again.'], 400);
 }
 
 $db = get_db();
@@ -24,13 +31,28 @@ $invalidMsg = 'Incorrect email or password.';
 
 if (!$user) {
     log_audit(null, 'login_failed', "Unknown account login attempt for email: {$email}");
+    notify_roles(['admin'], 'system', 'Failed Login Attempt', "Unknown account login attempt for {$email}.", 'user', null, 'warning');
     json_out(['success' => false, 'message' => $invalidMsg], 401);
 }
 
 // 1. Admin manual block check
 if ($user['status'] === 'blocked') {
     log_audit((int)$user['id'], 'login_blocked', 'Blocked user login attempt');
+    notify_roles(['admin'], 'system', 'Blocked Account Attempt', "Blocked user {$user['email']} attempted to sign in.", 'user', (int)$user['id'], 'danger');
     json_out(['success' => false, 'message' => 'This account has been blocked. Contact the security office.'], 403);
+}
+
+// Helper function to format seconds into readable text (e.g., "14 minute(s) and 35 second(s)")
+function format_lockout_time(int $seconds): string {
+    $mins = (int)floor($seconds / 60);
+    $secs = $seconds % 60;
+    
+    if ($mins > 0 && $secs > 0) {
+        return "{$mins} minute" . ($mins > 1 ? 's' : '') . " and {$secs} second" . ($secs > 1 ? 's' : '');
+    } elseif ($mins > 0) {
+        return "{$mins} minute" . ($mins > 1 ? 's' : '');
+    }
+    return "{$secs} second" . ($secs > 1 ? 's' : '');
 }
 
 // 2. Active lockout check
@@ -42,11 +64,13 @@ if (!empty($user['lockout_until'])) {
         $remainingSeconds = $lockoutTime - $currentTime;
         log_audit((int)$user['id'], 'login_lockout_rejected', "Attempt while account locked ({$remainingSeconds}s remaining)");
         
+        $readableTime = format_lockout_time($remainingSeconds);
+
         json_out([
             'success'           => false,
             'locked'            => true,
             'remaining_seconds' => $remainingSeconds,
-            'message'           => 'Too many failed login attempts. Your account is temporarily locked.'
+            'message'           => "Too many failed login attempts. Your account is temporarily locked for another {$readableTime}."
         ], 429);
     } else {
         // Lockout period has elapsed; reset counters
@@ -67,6 +91,7 @@ if ($user['auth_provider'] !== 'local' || !$user['password_hash'] || !password_v
            ->execute([$failedAttempts, $lockoutUntil, $user['id']]);
         
         log_audit((int)$user['id'], 'account_locked', 'Account locked for 15 minutes due to 5 consecutive failed login attempts.');
+        notify_roles(['admin'], 'system', 'Account Locked', "{$user['email']} was locked for 15 minutes after 5 failed login attempts.", 'user', (int)$user['id'], 'danger');
         
         json_out([
             'success'           => false,
@@ -80,6 +105,7 @@ if ($user['auth_provider'] !== 'local' || !$user['password_hash'] || !password_v
         
         $remainingTries = 5 - $failedAttempts;
         log_audit((int)$user['id'], 'login_failed', "Invalid password attempt ({$failedAttempts}/5)");
+        notify_roles(['admin'], 'system', 'Failed Login Attempt', "Invalid password for {$user['email']} ({$failedAttempts}/5 attempts).", 'user', (int)$user['id'], 'warning');
         
         json_out([
             'success' => false,

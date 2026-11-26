@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/oauth_config.php';
+require_once __DIR__ . '/notify_helper.php';
 
 start_session();
 
@@ -78,6 +79,8 @@ if (!$user) {
 $_SESSION['user_id'] = $userId;
 $_SESSION['role']    = $role;
 $_SESSION['name']    = $googleUser->getName() ?: $email;
+
+notify_roles(['admin'], 'system', 'User Signed In', "{$_SESSION['name']} ({$role}) signed in via Google.", 'user', $userId, 'info');
 
 header('Location: ../dashboard/index.php');
 exit;

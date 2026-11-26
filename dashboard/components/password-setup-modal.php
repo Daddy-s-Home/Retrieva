@@ -1,6 +1,7 @@
-<div class="modal-overlay show" id="password-modal-overlay">
+<div class="modal-overlay show" id="password-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="password-modal-title">
   <div class="modal-card">
-    <h2>Set a password for your account</h2>
+    <div class="modal-card__badge" aria-hidden="true">🔐</div>
+    <h2 id="password-modal-title">Set a password for your account</h2>
     <p class="modal-subtitle">
       You signed up with Google. Adding a password lets you sign in even
       when Google isn't available.
@@ -21,7 +22,7 @@
         Don't ask me again
       </label>
 
-      <div class="modal-actions">
+      <div class="modal-actions modal-actions--end">
         <button type="button" class="btn btn-ghost" id="password-modal-later">Later</button>
         <button type="submit" class="btn btn-primary">Save Password</button>
       </div>

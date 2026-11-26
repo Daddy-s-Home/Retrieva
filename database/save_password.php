@@ -21,7 +21,7 @@ if ($password !== $confirmPassword) {
 // 1) Forgot-password flow — user already verified a TOTP, reset_user_id is in session.
 // 2) First-login "set a password now" popup for Google sign-ups — user_id is in session.
 $userId = $_SESSION['reset_user_id'] ?? $_SESSION['user_id'] ?? null;
-if (!$userId) {
+if ($userId === null || $userId === '') {
     json_out(['success' => false, 'message' => 'No active session for password reset.'], 401);
 }
 

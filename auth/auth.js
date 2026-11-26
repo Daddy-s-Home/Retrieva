@@ -69,6 +69,7 @@ function initPasswordVisibilityToggle() {
   };
 
   toggleBtn.addEventListener('click', () => {
+    if (toggleBtn.disabled) return;
     const isPassword = passwordInput.type === 'password';
 
     if (hideTimeout) clearTimeout(hideTimeout);
@@ -77,7 +78,6 @@ function initPasswordVisibilityToggle() {
       passwordInput.type = 'text';
       showEyeOffIcon();
 
-      // Automatically hide plain text after 5 seconds
       hideTimeout = setTimeout(() => {
         hidePassword();
       }, 5000);
@@ -86,7 +86,6 @@ function initPasswordVisibilityToggle() {
     }
   });
 
-  // Re-mask password immediately if the user clicks away from the field
   passwordInput.addEventListener('blur', hidePassword);
 }
 
@@ -97,47 +96,123 @@ function initLoginForm() {
   const form = document.getElementById('login-form');
   if (!form) return;
 
+  const emailInput = form.email;
+  const passwordInput = form.password;
+  const rememberCheckbox = form.remember;
+  const toggleBtn = document.getElementById('toggle-password');
+
+  const modal = document.getElementById('lockout-modal');
+  const modalMsg = document.getElementById('modal-message');
+  const modalCloseBtn = document.getElementById('modal-close-btn');
+
+  const lockoutBanner = document.getElementById('lockout-banner');
+  const lockoutClock = document.getElementById('lockout-timer-clock');
+  const lockoutProgress = document.getElementById('lockout-progress');
+
+  function showLockoutModal(message) {
+    if (!modal) return;
+    if (modalMsg && message) modalMsg.textContent = message;
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  if (modalCloseBtn && modal) {
+    modalCloseBtn.addEventListener('click', () => {
+      modal.style.display = 'none';
+      modal.setAttribute('aria-hidden', 'true');
+    });
+  }
+
+  // -- PRE-FILL LOGIC: Check localStorage for saved email --
+  const savedEmail = localStorage.getItem('retrieva_remembered_email');
+  if (savedEmail && emailInput) {
+    emailInput.value = savedEmail;
+    if (rememberCheckbox) {
+      rememberCheckbox.checked = true;
+    }
+
+    emailInput.dispatchEvent(new Event('input', { bubbles: true }));
+    emailInput.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
   let lockoutInterval = null;
 
+  function clearAndDisableInputs() {
+    if (emailInput) {
+      emailInput.value = '';
+      emailInput.disabled = true;
+    }
+    if (passwordInput) {
+      passwordInput.value = '';
+      passwordInput.type = 'password';
+      passwordInput.disabled = true;
+    }
+    if (toggleBtn) {
+      toggleBtn.disabled = true;
+      toggleBtn.style.opacity = '0.4';
+      toggleBtn.style.pointerEvents = 'none';
+    }
+  }
+
+  function enableInputs() {
+    if (emailInput) emailInput.disabled = false;
+    if (passwordInput) passwordInput.disabled = false;
+    if (toggleBtn) {
+      toggleBtn.disabled = false;
+      toggleBtn.style.opacity = '1';
+      toggleBtn.style.pointerEvents = 'auto';
+    }
+  }
+
   function startLockoutTimer(seconds) {
-    const emailInput = form.email;
-    const passwordInput = form.password;
     const btn = form.querySelector('button[type="submit"]');
 
-    emailInput.disabled = true;
-    passwordInput.disabled = true;
+    clearAndDisableInputs();
     btn.disabled = true;
+    btn.textContent = 'Sign In';
+
+    if (lockoutBanner) lockoutBanner.style.display = 'block';
 
     clearInterval(lockoutInterval);
 
+    const totalDuration = seconds;
     let remaining = seconds;
-    const updateBtnText = () => {
+
+    const updateUI = () => {
       const mins = Math.floor(remaining / 60);
       const secs = remaining % 60;
-      btn.textContent = `Locked out (${mins}:${secs < 10 ? '0' : ''}${secs})`;
+      const formattedTime = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+
+      if (lockoutClock) lockoutClock.textContent = formattedTime;
+      if (lockoutProgress) {
+        const percent = Math.max(0, (remaining / totalDuration) * 100);
+        lockoutProgress.style.width = `${percent}%`;
+      }
     };
 
-    updateBtnText();
+    updateUI();
 
     lockoutInterval = setInterval(() => {
       remaining -= 1;
       if (remaining <= 0) {
         clearInterval(lockoutInterval);
-        emailInput.disabled = false;
-        passwordInput.disabled = false;
+        enableInputs();
         btn.disabled = false;
         btn.textContent = 'Sign In';
-        showToast('Lockout period ended. You may try logging in again.', 'success');
+
+        if (lockoutBanner) lockoutBanner.style.display = 'none';
+
+        showToast('Lockout period ended. You may attempt to sign in again.', 'success');
       } else {
-        updateBtnText();
+        updateUI();
       }
     }, 1000);
   }
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const email = form.email.value.trim();
-    const password = form.password.value;
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
     const btn = form.querySelector('button[type="submit"]');
 
     if (!email || !password) {
@@ -150,14 +225,30 @@ function initLoginForm() {
       return;
     }
 
+    const recaptchaToken = typeof grecaptcha !== 'undefined' ? grecaptcha.getResponse() : '';
+    if (!recaptchaToken) {
+      showToast('Please complete the reCAPTCHA verification.', 'error');
+      return;
+    }
+
+    const rememberMe = rememberCheckbox ? rememberCheckbox.checked : false;
+
+    if (rememberMe) {
+      localStorage.setItem('retrieva_remembered_email', email);
+    } else {
+      localStorage.removeItem('retrieva_remembered_email');
+    }
+
     btn.disabled = true;
     btn.textContent = 'Signing in…';
 
-    const res = await postJSON(`${API}/login.php`, { email, password });
+    const res = await postJSON(`${API}/login.php`, { email, password, remember: rememberMe, recaptcha_token: recaptchaToken });
 
     if (res.locked) {
-      showToast(res.message, 'error');
+      const lockoutMsg = res.message || 'Multiple failed attempts detected. Your account access is temporarily restricted.';
+      if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
       startLockoutTimer(res.remaining_seconds || 900);
+      showLockoutModal(lockoutMsg);
       return;
     }
 
@@ -168,6 +259,7 @@ function initLoginForm() {
       sessionStorage.setItem('retrieva_totp_purpose', 'login');
       window.location.href = 'totp.php';
     } else {
+      if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
       showToast(res.message || 'Sign in failed.', 'error');
     }
   });
@@ -183,7 +275,12 @@ function initTotpForm() {
   const boxes = document.querySelectorAll('.totp-boxes input');
   if (!boxes.length) return;
 
-  const submitBtn = document.getElementById('totp-submit');
+  const modal = document.getElementById('totp-modal');
+  const modalSpinner = document.getElementById('modal-spinner');
+  const modalSuccessIcon = document.getElementById('modal-success-icon');
+  const modalTitle = document.getElementById('modal-title');
+  const modalDesc = document.getElementById('modal-desc');
+
   const purpose = sessionStorage.getItem('retrieva_totp_purpose') || 'login';
 
   const getCode = () => Array.from(boxes).map((b) => b.value).join('');
@@ -191,8 +288,28 @@ function initTotpForm() {
   const updateState = () => {
     const code = getCode();
     boxes.forEach((b) => b.classList.toggle('filled', b.value !== ''));
-    if (submitBtn) submitBtn.disabled = code.length !== 6;
     return code;
+  };
+
+  const showLoadingModal = () => {
+    if (!modal) return;
+    if (modalSpinner) modalSpinner.style.display = 'block';
+    if (modalSuccessIcon) modalSuccessIcon.style.display = 'none';
+    if (modalTitle) modalTitle.textContent = 'Verifying Code...';
+    if (modalDesc) modalDesc.textContent = 'Authenticating your security session, please wait.';
+    modal.style.display = 'flex';
+  };
+
+  const showSuccessModal = () => {
+    if (!modal) return;
+    if (modalSpinner) modalSpinner.style.display = 'none';
+    if (modalSuccessIcon) modalSuccessIcon.style.display = 'flex';
+    if (modalTitle) modalTitle.textContent = 'Verification Successful!';
+    if (modalDesc) modalDesc.textContent = 'Redirecting to the dashboard...';
+  };
+
+  const hideModal = () => {
+    if (modal) modal.style.display = 'none';
   };
 
   boxes.forEach((box, i) => {
@@ -203,11 +320,13 @@ function initTotpForm() {
       const code = updateState();
       if (code.length === 6) submitCode(code);
     });
+
     box.addEventListener('keydown', (e) => {
       if (e.key === 'Backspace' && !box.value && boxes[i - 1]) {
         boxes[i - 1].focus();
       }
     });
+
     box.addEventListener('paste', (e) => {
       e.preventDefault();
       const digits = (e.clipboardData.getData('text').match(/\d/g) || []).slice(0, 6);
@@ -218,20 +337,20 @@ function initTotpForm() {
   });
 
   async function submitCode(code) {
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Verifying…';
-    }
+    boxes.forEach((b) => b.blur());
+    showLoadingModal();
 
     const res = await postJSON(`${API}/totp_verify.php`, { code, purpose });
 
     if (res.success) {
-      showToast('Verified!', 'success');
-      window.location.href = res.redirect || '../dashboard/index.php';
+      showSuccessModal();
+      setTimeout(() => {
+        window.location.href = res.redirect || '../dashboard/index.php';
+      }, 800);
     } else {
+      hideModal();
       boxes.forEach((b) => { b.classList.add('error'); b.value = ''; });
       boxes[0].focus();
-      if (submitBtn) submitBtn.textContent = 'Verify Security Key';
       showToast(res.message || 'Incorrect code.', 'error');
       updateState();
     }
@@ -243,7 +362,34 @@ function initTotpForm() {
     if (code.length === 6) submitCode(code);
   });
 
-  boxes[0].focus();
+  const fillCode = (raw, autoSubmit = false) => {
+    const digits = (String(raw || '').match(/\d/g) || []).slice(0, 6);
+    if (!digits.length) return false;
+    digits.forEach((d, idx) => { if (boxes[idx]) boxes[idx].value = d; });
+    const code = updateState();
+    if (autoSubmit && code.length === 6) {
+      submitCode(code);
+    } else if (code.length === 6) {
+      totpForm.querySelector('button[type="submit"]')?.focus();
+    }
+    return true;
+  };
+
+  document.getElementById('totp-paste-btn')?.addEventListener('click', async () => {
+    try {
+      const clip = await navigator.clipboard.readText();
+      if (!fillCode(clip, false)) showToast('No 6-digit code found in clipboard.', 'error');
+    } catch {
+      showToast('Clipboard access blocked. Paste directly into the boxes.', 'error');
+    }
+  });
+
+  const urlCode = new URLSearchParams(window.location.search).get('code');
+  if (urlCode && /^\d{6}$/.test(urlCode.trim())) {
+    fillCode(urlCode.trim(), false);
+  } else {
+    boxes[0].focus();
+  }
 }
 
 /* ---------------------------------------------------------------------
@@ -282,13 +428,25 @@ function initForgotPasswordFlow() {
         return;
       }
 
+      const recaptchaToken = typeof grecaptcha !== 'undefined' ? grecaptcha.getResponse() : '';
+      if (!recaptchaToken) {
+        showToast('Please complete the reCAPTCHA verification.', 'error');
+        return;
+      }
+
       btn.disabled = true;
       btn.textContent = 'Sending…';
 
-      const res = await postJSON(`${API}/forgot_password.php`, { email });
+      const res = await postJSON(`${API}/forgot_password.php`, { email, recaptcha_token: recaptchaToken });
 
       btn.disabled = false;
-      btn.textContent = 'Send Code';
+      btn.textContent = 'Send Security Code';
+
+      if (!res.success) {
+        if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
+        showToast(res.message || 'reCAPTCHA verification failed.', 'error');
+        return;
+      }
 
       showToast(res.message || 'Check your email for a code.', 'success');
       sessionStorage.setItem('retrieva_totp_purpose', 'password_reset');

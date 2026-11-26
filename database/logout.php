@@ -5,7 +5,7 @@ require_once __DIR__ . '/db.php';
 start_session();
 header('Content-Type: application/json');
 
-if (!empty($_SESSION['user_id'])) {
+if (has_session_id('user_id')) {
     log_audit((int)$_SESSION['user_id'], 'logout', '');
 }
 

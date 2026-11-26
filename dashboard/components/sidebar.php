@@ -35,8 +35,12 @@ function nav_item(string $href, string $page, string $icon, string $label, array
     nav_item('index.php', 'dashboard', '🏠', 'Dashboard', ['admin','security','professor','student'], $role, $currentPage);
     nav_item('found-items.php', 'found-items', '📦', 'Found Items', ['admin','security'], $role, $currentPage);
     nav_item('lost-items.php', 'lost-items', '🔍', 'Lost Items', ['admin','security','professor','student'], $role, $currentPage);
+    nav_item('my-reports.php', 'my-reports', '📋', 'My Reports', ['student'], $role, $currentPage);
     nav_item('claims.php', 'claims', '🛡️', 'Claims', ['admin','security','professor','student'], $role, $currentPage);
     nav_item('pending-verifications.php', 'pending-verifications', '✅', 'Pending Verifications', ['admin','security'], $role, $currentPage, $pendingBadge > 0 ? (string) $pendingBadge : null);
+    nav_item('pickup-verification.php', 'pickup-verification', '📷', 'QR Pickup Verification', ['admin','security'], $role, $currentPage);
+    nav_item('reports.php', 'reports', '📊', 'Reports & Export', ['admin','security'], $role, $currentPage);
+    nav_item('audit-trail.php', 'audit-trail', '📜', 'Audit Trail', ['admin'], $role, $currentPage);
     ?>
   </nav>
 
@@ -44,6 +48,6 @@ function nav_item(string $href, string $page, string $icon, string $label, array
 
   <div class="sidebar__footer">
     <img src="../assets/icons/umak-icon.svg" alt="" width="22" height="22">
-    <span>University of Makati<br><small>Security Office</small></span>
+    <span>University of Makati</span>
   </div>
 </aside>

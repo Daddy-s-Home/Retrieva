@@ -1,13 +1,100 @@
 <?php
 declare(strict_types=1);
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 require_once __DIR__ . '/../database/db.php';
+require_once __DIR__ . '/../database/recaptcha_config.php';
 
-start_session();
+$autoloader = __DIR__ . '/../vendor/autoload.php';
+if (file_exists($autoloader)) {
+    require_once $autoloader;
+}
 
-// Already signed in? Skip straight to the dashboard.
-if (!empty($_SESSION['user_id'])) {
+if (has_session_id('user_id')) {
     header('Location: ../dashboard/index.php');
     exit;
+}
+
+$login_error = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
+    $password = $_POST['password'] ?? '';
+
+    if ($email && $password) {
+        if (function_exists('get_db_connection')) {
+            $pdo = get_db_connection();
+        } elseif (function_exists('getDB')) {
+            $pdo = getDB();
+        } elseif (isset($pdo) && $pdo instanceof PDO) {
+            // $pdo exists from db.php
+        } else {
+            $pdo = null;
+        }
+
+        if ($pdo) {
+            $stmt = $pdo->prepare('SELECT id, full_name, password_hash FROM users WHERE email = :email LIMIT 1');
+            $stmt->execute(['email' => $email]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($user && password_verify($password, $user['password_hash'])) {
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['user_name'] = $user['full_name'];
+
+                $userName = $user['full_name'] ?? 'A user';
+                $notifMessage = htmlspecialchars($userName) . ' signed in.';
+
+                // Store session notification as fallback for redirect
+                $_SESSION['pending_notif'] = [
+                    'title'   => 'User Activity',
+                    'message' => $notifMessage,
+                    'type'    => 'info'
+                ];
+
+                // Trigger Pusher Broadcast for real-time listeners
+                if (class_exists('Pusher\Pusher')) {
+                    try {
+                        $options = [
+                            'cluster' => 'eu',
+                            'useTLS'  => true,
+                            'curl_options' => [
+                                CURLOPT_SSL_VERIFYPEER => false
+                            ]
+                        ];
+
+                        $pusher = new Pusher\Pusher(
+                            '37ca687c653f5f52a830',
+                            '3490c00f428c3a676313',
+                            '2190919',
+                            $options
+                        );
+
+                        $payload = [
+                            'title'   => 'User Activity',
+                            'message' => $notifMessage,
+                            'type'    => 'info'
+                        ];
+
+                        $pusher->trigger('retrieva-global', 'user-login', $payload);
+                    } catch (\Throwable $e) {
+                        error_log('Pusher Exception: ' . $e->getMessage());
+                    }
+                }
+
+                header('Location: ../dashboard/index.php');
+                exit;
+            } else {
+                $login_error = 'Invalid email address or password.';
+            }
+        } else {
+            $login_error = 'Database connection failed.';
+        }
+    } else {
+        $login_error = 'Please fill in all required fields.';
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -16,6 +103,7 @@ if (!empty($_SESSION['user_id'])) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sign In — Retrieva</title>
+<link rel="icon" type="image/svg+xml" href="../assets/icons/logo.svg">
 <link rel="stylesheet" href="../assets/theme.css">
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -45,7 +133,13 @@ if (!empty($_SESSION['user_id'])) {
       <h1 id="login-heading">Welcome Back!</h1>
       <p class="subtitle">Sign in to continue to your account</p>
 
-      <form id="login-form">
+      <?php if (!empty($login_error)): ?>
+        <div class="alert alert-danger" style="color: var(--c-danger, #d9534f); margin-bottom: 12px; font-size: 13px;">
+          <?= htmlspecialchars($login_error) ?>
+        </div>
+      <?php endif; ?>
+
+      <form id="login-form" action="login.php" method="POST">
         <div class="field">
           <label for="email">Email Address</label>
           <div class="input-wrap">
@@ -66,10 +160,36 @@ if (!empty($_SESSION['user_id'])) {
             </button>
           </div>
         </div>
+
         <div class="login-options">
-          <label class="remember-me"><input type="checkbox" name="remember"> <span>Remember me</span></label>
+          <label class="remember-me">
+            <input type="checkbox" id="remember-me-checkbox" name="remember"> 
+            <span>Remember Me</span>
+          </label>
           <a href="forgot-password.php">Forgot Password?</a>
         </div>
+        
+        <div id="lockout-banner" class="lockout-banner" style="display: none;">
+          <div class="lockout-banner__header">
+            <span class="lockout-banner__icon">🔒</span>
+            <div class="lockout-banner__titles">
+              <strong>Security Cooldown Active</strong>
+              <p>Multiple failed attempts detected. System locked for protection.</p>
+            </div>
+          </div>
+          <div class="lockout-banner__timer-row">
+            <span class="lockout-banner__hint">Time remaining before retry:</span>
+            <span id="lockout-timer-clock" class="lockout-banner__clock">15:00</span>
+          </div>
+          <div class="lockout-banner__bar">
+            <div id="lockout-progress" class="lockout-banner__progress" style="width: 100%;"></div>
+          </div>
+        </div>
+
+        <div class="recaptcha-wrap">
+          <div class="g-recaptcha" data-sitekey="<?= h(RECAPTCHA_SITE_KEY) ?>"></div>
+        </div>
+
         <button type="submit" class="btn btn-primary">Sign In</button>
       </form>
 
@@ -84,6 +204,7 @@ if (!empty($_SESSION['user_id'])) {
   </div>
 </main>
 
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 <script src="../assets/effects/particles/particles.min.js"></script>
 <script src="../assets/effects/particles/auth-particles.js"></script>
 <script src="auth.js"></script>

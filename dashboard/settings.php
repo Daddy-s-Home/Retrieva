@@ -48,6 +48,7 @@ function settings_status_class(string $status): string {
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Settings — Retrieva</title>
+<link rel="icon" type="image/svg+xml" href="../assets/icons/logo.svg">
 <link rel="stylesheet" href="../assets/theme.css"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="settings.css">
 </head>
 <body data-page="settings" data-role="<?= htmlspecialchars($role, ENT_QUOTES, 'UTF-8') ?>">
@@ -70,7 +71,14 @@ function settings_status_class(string $status): string {
         <div class="settings-card__heading"><div><span class="settings-eyebrow">Security</span><h2>Change password</h2></div><span class="settings-card__icon">🔐</span></div>
         <form id="change-password-form" class="settings-form">
           <label class="field"><span>Current password</span><input type="password" name="current_password" autocomplete="current-password" required></label>
-          <label class="field"><span>New password</span><input type="password" name="password" minlength="8" autocomplete="new-password" required></label>
+          <label class="field"><span>New password</span><input type="password" id="new-password-input" name="password" minlength="8" autocomplete="new-password" required></label>
+          <ul class="pw-criteria" id="pw-criteria" aria-live="polite">
+            <li data-rule="length"><span class="pw-icon" aria-hidden="true">✕</span> At least 8 characters</li>
+            <li data-rule="upper"><span class="pw-icon" aria-hidden="true">✕</span> At least 1 uppercase letter (A–Z)</li>
+            <li data-rule="lower"><span class="pw-icon" aria-hidden="true">✕</span> At least 1 lowercase letter (a–z)</li>
+            <li data-rule="number"><span class="pw-icon" aria-hidden="true">✕</span> At least 1 number (0–9)</li>
+            <li data-rule="special"><span class="pw-icon" aria-hidden="true">✕</span> At least 1 special character (!@#$%…)</li>
+          </ul>
           <label class="field"><span>Confirm new password</span><input type="password" name="confirm_password" minlength="8" autocomplete="new-password" required></label>
           <button type="submit" class="btn btn-primary">Update password</button><p class="settings-feedback" id="password-feedback" role="status"></p>
         </form>
@@ -91,6 +99,19 @@ function settings_status_class(string $status): string {
       </tbody></table></div>
     </section>
   </main>
+</div>
+<div class="modal-overlay" id="totp-disable-modal" role="dialog" aria-modal="true" aria-labelledby="totp-disable-title">
+  <div class="modal-card">
+    <div class="modal-card__badge modal-card__badge--danger" aria-hidden="true">🛡️</div>
+    <h2 id="totp-disable-title">Disable Authenticator?</h2>
+    <p class="modal-subtitle">
+      Removing two-factor authenticator protection will make your account less secure. You can re-enable it anytime in Settings.
+    </p>
+    <div class="modal-actions modal-actions--end">
+      <button type="button" class="btn btn-ghost" id="totp-disable-cancel">Cancel</button>
+      <button type="button" class="btn btn-danger" id="totp-disable-confirm">Disable Authenticator</button>
+    </div>
+  </div>
 </div>
 <script src="dashboard.js"></script><script src="settings.js"></script>
 </body></html>

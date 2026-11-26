@@ -8,7 +8,9 @@ $current = (string)($input['current_password'] ?? '');
 $password = (string)($input['password'] ?? '');
 $confirm = (string)($input['confirm_password'] ?? '');
 if ($current === '' || $password === '' || $confirm === '') json_out(['success' => false, 'message' => 'All password fields are required.'], 400);
-if (strlen($password) < 8) json_out(['success' => false, 'message' => 'Password must be at least 8 characters.'], 400);
+if (strlen($password) < 8 || !preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/\d/', $password) || !preg_match('/[^A-Za-z0-9]/', $password)) {
+    json_out(['success' => false, 'message' => 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.'], 400);
+}
 if ($password !== $confirm) json_out(['success' => false, 'message' => 'Passwords do not match.'], 400);
 $stmt = get_db()->prepare('SELECT password_hash FROM users WHERE id = ?');
 $stmt->execute([$session['user_id']]);

@@ -8,7 +8,7 @@
 declare(strict_types=1);
 
 const DB_HOST = 'localhost';
-const DB_NAME = 'retrieva_db';
+const DB_NAME = 'retrieva_db_current';
 const DB_USER = 'root';
 const DB_PASS = '';
 
@@ -82,10 +82,15 @@ function json_out(array $payload, int $code = 200): void {
     exit;
 }
 
+/** Checks whether a session ID key is present without rejecting ID 0. */
+function has_session_id(string $key = 'user_id'): bool {
+    return isset($_SESSION[$key]) && $_SESSION[$key] !== '';
+}
+
 /** Quick guard for endpoints that require an authenticated session. */
 function require_login(): array {
     start_session();
-    if (empty($_SESSION['user_id'])) {
+    if (!has_session_id('user_id')) {
         json_out(['success' => false, 'message' => 'Not authenticated.'], 401);
     }
     return $_SESSION;
@@ -107,7 +112,7 @@ function require_role(array $allowed_roles): array {
  */
 function require_login_page(string $loginPath = '../auth/login.php'): array {
     start_session();
-    if (empty($_SESSION['user_id'])) {
+    if (!has_session_id('user_id')) {
         header('Location: ' . $loginPath);
         exit;
     }

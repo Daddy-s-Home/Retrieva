@@ -2,6 +2,12 @@
 declare(strict_types=1);
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/totp_helper.php';
+require_once __DIR__ . '/notify_helper.php';
+
+$autoloader = __DIR__ . '/../vendor/autoload.php';
+if (file_exists($autoloader)) {
+    require_once $autoloader;
+}
 
 start_session();
 header('Content-Type: application/json');
@@ -18,7 +24,7 @@ $userId = $purpose === 'password_reset'
     ? ($_SESSION['pending_reset_user_id'] ?? null)
     : ($_SESSION['pending_totp_user_id'] ?? null);
 
-if (!$userId) {
+if ($userId === null || $userId === '') {
     json_out(['success' => false, 'message' => 'Session expired — please start again.'], 401);
 }
 
@@ -49,7 +55,45 @@ if ($purpose === 'login') {
     $_SESSION['name']    = $u['full_name'];
     unset($_SESSION['pending_totp_user_id']);
 
+    $notifMessage = 'You have logged in successfully.';
+
+    $_SESSION['pending_notif'] = [
+        'title'   => 'User Activity',
+        'message' => $notifMessage,
+        'type'    => 'info'
+    ];
+
+    if (class_exists('Pusher\Pusher')) {
+        try {
+            $options = [
+                'cluster' => 'eu',
+                'useTLS'  => true,
+                'curl_options' => [
+                    CURLOPT_SSL_VERIFYPEER => false
+                ]
+            ];
+
+            $pusher = new Pusher\Pusher(
+                '37ca687c653f5f52a830',
+                '3490c00f428c3a676313',
+                '2190919',
+                $options
+            );
+
+            $payload = [
+                'title'   => 'User Activity',
+                'message' => $notifMessage,
+                'type'    => 'info'
+            ];
+
+            $pusher->trigger('retrieva-global', 'user-login', $payload);
+        } catch (\Throwable $e) {
+            error_log('Pusher Exception: ' . $e->getMessage());
+        }
+    }
+
     log_audit((int)$userId, 'login_success', 'TOTP verified, session started.');
+    notify_roles(['admin'], 'system', 'User Signed In', "{$u['full_name']} ({$u['role']}) signed in.", 'user', (int)$userId, 'info');
     json_out(['success' => true, 'redirect' => '../dashboard/index.php']);
 }
 

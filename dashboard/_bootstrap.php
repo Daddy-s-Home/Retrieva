@@ -9,9 +9,48 @@ declare(strict_types=1);
  * logged in.
  */
 
+require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../database/db.php';
 require_once __DIR__ . '/rbac.php';
 
+// --- Pusher Configuration ---
+define('PUSHER_APP_ID', '2190919');
+define('PUSHER_KEY', '37ca687c653f5f52a830');
+define('PUSHER_SECRET', '3490c00f428c3a676313');
+define('PUSHER_CLUSTER', 'eu');
+
+/**
+ * Get an initialized Pusher instance.
+ */
+function get_pusher(): Pusher\Pusher {
+    static $pusher = null;
+    if ($pusher === null) {
+        $pusher = new Pusher\Pusher(
+            PUSHER_KEY,
+            PUSHER_SECRET,
+            PUSHER_APP_ID,
+            [
+                'cluster' => PUSHER_CLUSTER,
+                'useTLS' => true,
+            ]
+        );
+    }
+    return $pusher;
+}
+
+/**
+ * Helper function to trigger real-time notifications via Pusher.
+ */
+function notify_channel(string $channel, string $event, array $data): void {
+    try {
+        $pusher = get_pusher();
+        $pusher->trigger($channel, $event, $data);
+    } catch (\Throwable $e) {
+        error_log('Pusher trigger failed: ' . $e->getMessage());
+    }
+}
+
+// --- Session & User Resolution ---
 $session = require_login_page('../auth/login.php');
 
 $stmt = get_db()->prepare(
@@ -32,10 +71,8 @@ if (!$user) {
 
 $role = $user['role'];
 
-// Offline / no avatar on record -> the header falls back to the default icon.
-$avatarSrc = $user['avatar_url'] ?: '../assets/icons/umak-icon.svg';
+// Offline / no avatar on record -> the header falls back to the custom Retrieva avatar.
+$avatarSrc = $user['avatar_url'] ?: '../assets/images/default-avatar.svg';
 
 // The current page's slug, used by sidebar.php to highlight the active link.
-// Every dashboard/*.php page should set $currentPage before including this
-// file's sibling includes, or default it here.
 $currentPage = $currentPage ?? 'dashboard';

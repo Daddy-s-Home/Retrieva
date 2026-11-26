@@ -17,6 +17,8 @@
   --c-text:          #1F2A3D;
   --c-text-muted:    #6B7686;
   --c-border:        #E6E9F0;
+  --c-border-strong: #CFD6E4;
+  --c-surface-hover: #F3F6FB;
   --c-success:       #17A673;
   --c-success-bg:    #E4F7EF;
   --c-danger:        #DC3545;
@@ -30,6 +32,7 @@
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 20px;
+  --shadow-sm:   0 1px 3px rgba(0, 50, 118, 0.05);
   --shadow-card: 0 2px 10px rgba(0, 50, 118, 0.06);
   --shadow-pop:  0 12px 32px rgba(0, 50, 118, 0.18);
 
@@ -43,6 +46,7 @@ html, body {
   margin: 0;
   padding: 0;
   font-family: var(--font-body);
+  line-height: 1.5;
   color: var(--c-text);
   background: var(--c-bg-soft);
   -webkit-font-smoothing: antialiased;
@@ -50,7 +54,7 @@ html, body {
 
 img { max-width: 100%; display: block; }
 
-button, input {
+button, input, select, textarea {
   font-family: inherit;
 }
 
@@ -59,6 +63,10 @@ a { color: inherit; }
 :focus-visible {
   outline: 2px solid var(--c-info);
   outline-offset: 2px;
+}
+
+[hidden] {
+  display: none !important;
 }
 
 .visually-hidden {

@@ -1,29 +1,93 @@
 <?php
 declare(strict_types=1);
+
 $currentPage = 'dashboard';
 require_once __DIR__ . '/_bootstrap.php';
-// $user, $role, $avatarSrc, $currentPage are now available.
+
 $db = get_db();
 $isAdminSide = role_is_admin_side($role);
 $userId = (int) $user['id'];
-if ($isAdminSide) {
-  $totalFound = (int) $db->query('SELECT COUNT(*) FROM found_items')->fetchColumn();
-  $totalLost = (int) $db->query('SELECT COUNT(*) FROM lost_items')->fetchColumn();
-  $totalClaims = (int) $db->query('SELECT COUNT(*) FROM claims')->fetchColumn();
-  $itemsReturned = (int) $db->query("SELECT COUNT(*) FROM found_items WHERE status = 'claimed'")->fetchColumn();
-} else {
-  $stmt = $db->prepare('SELECT COUNT(*) FROM lost_items WHERE reported_by = ?'); $stmt->execute([$userId]); $totalLost = (int) $stmt->fetchColumn();
-  $stmt = $db->prepare('SELECT COUNT(*) FROM claims WHERE claimant_id = ?'); $stmt->execute([$userId]); $totalClaims = (int) $stmt->fetchColumn();
-  $totalFound = (int) $db->query("SELECT COUNT(*) FROM found_items WHERE status = 'unclaimed'")->fetchColumn();
-  $stmt = $db->prepare("SELECT COUNT(*) FROM claims WHERE claimant_id = ? AND status = 'approved'"); $stmt->execute([$userId]); $itemsReturned = (int) $stmt->fetchColumn();
+
+/**
+ * Security Helper: Smart Masking for Sensitive Item Names on Student Dashboard
+ */
+if (!function_exists('mask_item_name')) {
+    function mask_item_name(string $name, bool $isAdmin): string {
+        if ($isAdmin) {
+            return $name;
+        }
+        $masked = preg_replace_callback('/\b([A-Z0-9]{2})[A-Z0-9]{3,}([A-Z0-9]{2})\b/i', function ($matches) {
+            return $matches[1] . str_repeat('*', strlen($matches[0]) - 4) . $matches[2];
+        }, $name);
+
+        return $masked ?? $name;
+    }
 }
+
+// -------------------------------------------------------------------------
+// 1. STAT METRICS
+// -------------------------------------------------------------------------
+if ($isAdminSide) {
+    $totalFound    = (int) $db->query('SELECT COUNT(*) FROM found_items')->fetchColumn();
+    $totalLost     = (int) $db->query('SELECT COUNT(*) FROM lost_items')->fetchColumn();
+    $totalClaims   = (int) $db->query('SELECT COUNT(*) FROM claims')->fetchColumn();
+    $itemsReturned = (int) $db->query("SELECT COUNT(*) FROM found_items WHERE status = 'claimed'")->fetchColumn();
+} else {
+    $stmt = $db->prepare('SELECT COUNT(*) FROM lost_items WHERE reported_by = ?');
+    $stmt->execute([$userId]);
+    $totalLost = (int) $stmt->fetchColumn();
+
+    $stmt = $db->prepare('SELECT COUNT(*) FROM claims WHERE claimant_id = ?');
+    $stmt->execute([$userId]);
+    $totalClaims = (int) $stmt->fetchColumn();
+
+    $totalFound = (int) $db->query("SELECT COUNT(*) FROM found_items WHERE status = 'unclaimed'")->fetchColumn();
+
+    $stmt = $db->prepare("SELECT COUNT(*) FROM claims WHERE claimant_id = ? AND status = 'approved'");
+    $stmt->execute([$userId]);
+    $itemsReturned = (int) $stmt->fetchColumn();
+}
+
 $recentFound = $db->query('SELECT item_name, location_found, date_found, status FROM found_items ORDER BY created_at DESC LIMIT 5')->fetchAll();
 $pendingCount = (int) $db->query("SELECT COUNT(*) FROM claims WHERE status IN ('pending', 'manual_review')")->fetchColumn();
+
+// -------------------------------------------------------------------------
+// 2. CATEGORY BREAKDOWN
+// -------------------------------------------------------------------------
 $categories = ['Electronics', 'Clothing', 'IDs & Cards', 'Accessories', 'Books & Papers', 'Others'];
 $categoryCounts = array_fill_keys($categories, 0);
-foreach ($db->query('SELECT category, COUNT(*) AS total FROM found_items GROUP BY category')->fetchAll() as $row) if (isset($categoryCounts[$row['category']])) $categoryCounts[$row['category']] = (int) $row['total'];
-$days = []; $foundSeries = []; $lostSeries = [];
-for ($i = 6; $i >= 0; $i--) { $day = date('Y-m-d', strtotime("-{$i} days")); $days[] = date('M j', strtotime($day)); $stmt = $db->prepare('SELECT COUNT(*) FROM found_items WHERE date_found = ?'); $stmt->execute([$day]); $foundSeries[] = (int) $stmt->fetchColumn(); $stmt = $db->prepare('SELECT COUNT(*) FROM lost_items WHERE date_lost = ?'); $stmt->execute([$day]); $lostSeries[] = (int) $stmt->fetchColumn(); }
+
+$catRows = $db->query('SELECT category, COUNT(*) AS total FROM found_items GROUP BY category')->fetchAll();
+foreach ($catRows as $row) {
+    if (isset($categoryCounts[$row['category']])) {
+        $categoryCounts[$row['category']] = (int) $row['total'];
+    }
+}
+
+// -------------------------------------------------------------------------
+// 3. OPTIMIZED 7-DAY TREND QUERIES
+// -------------------------------------------------------------------------
+$startDate = date('Y-m-d', strtotime('-6 days'));
+$endDate   = date('Y-m-d');
+
+$stmtFound = $db->prepare('SELECT date_found, COUNT(*) AS cnt FROM found_items WHERE date_found BETWEEN ? AND ? GROUP BY date_found');
+$stmtFound->execute([$startDate, $endDate]);
+$foundMap = $stmtFound->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
+
+$stmtLost = $db->prepare('SELECT date_lost, COUNT(*) AS cnt FROM lost_items WHERE date_lost BETWEEN ? AND ? GROUP BY date_lost');
+$stmtLost->execute([$startDate, $endDate]);
+$lostMap = $stmtLost->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
+
+$days = [];
+$foundSeries = [];
+$lostSeries = [];
+
+for ($i = 6; $i >= 0; $i--) {
+    $dayKey = date('Y-m-d', strtotime("-{$i} days"));
+    $days[] = date('M j', strtotime($dayKey));
+    $foundSeries[] = (int) ($foundMap[$dayKey] ?? 0);
+    $lostSeries[]  = (int) ($lostMap[$dayKey] ?? 0);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -31,11 +95,14 @@ for ($i = 6; $i >= 0; $i--) { $day = date('Y-m-d', strtotime("-{$i} days")); $da
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard — Retrieva</title>
+<link rel="icon" type="image/svg+xml" href="../assets/icons/logo.svg">
 <link rel="stylesheet" href="../assets/theme.css">
 <link rel="stylesheet" href="styles.css">
+
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 </head>
-<body data-page="<?= htmlspecialchars($currentPage) ?>" data-role="<?= htmlspecialchars($role) ?>">
+<body data-page="<?= h($currentPage) ?>" data-role="<?= h($role) ?>" data-user-id="<?= $userId ?>">
 
 <?php include __DIR__ . '/components/sidebar.php'; ?>
 
@@ -44,71 +111,91 @@ for ($i = 6; $i >= 0; $i--) { $day = date('Y-m-d', strtotime("-{$i} days")); $da
 
   <main class="page-content">
     <div class="page-header">
-      <h1>Good morning, <?= htmlspecialchars(explode(' ', $user['full_name'])[0]) ?>! 👋</h1>
+      <h1>Good morning, <?= h(explode(' ', $user['full_name'])[0]) ?>! 👋</h1>
       <p>Here's what's happening with Retrieva today.</p>
     </div>
 
-    <!-- stat cards -->
     <section class="stat-grid">
       <div class="stat-card stat-card--blue">
         <div class="stat-card__icon">📦</div>
         <div>
-          <div class="stat-card__value"><?= $totalFound ?></div>
-          <div class="stat-card__label">Total Found Items</div>
-          <div class="stat-card__delta">▲ 18% from last month</div>
+          <div class="stat-card__value" id="stat-total-found"><?= $totalFound ?></div>
+          <div class="stat-card__label"><?= $isAdminSide ? 'Total Found Items' : 'Available Unclaimed' ?></div>
+          <div class="stat-card__delta">System Active</div>
         </div>
       </div>
+
       <div class="stat-card stat-card--gold">
         <div class="stat-card__icon">🔍</div>
         <div>
-          <div class="stat-card__value"><?= $totalLost ?></div>
-          <div class="stat-card__label">Total Lost Reports</div>
-          <div class="stat-card__delta">▲ 15% from last month</div>
+          <div class="stat-card__value" id="stat-total-lost"><?= $totalLost ?></div>
+          <div class="stat-card__label"><?= $isAdminSide ? 'Total Lost Reports' : 'My Lost Reports' ?></div>
+          <div class="stat-card__delta">System Active</div>
         </div>
       </div>
+
       <div class="stat-card stat-card--purple">
         <div class="stat-card__icon">🛡️</div>
         <div>
-          <div class="stat-card__value"><?= $totalClaims ?></div>
-          <div class="stat-card__label">Total Claims</div>
-          <div class="stat-card__delta">▲ 22% from last month</div>
+          <div class="stat-card__value" id="stat-total-claims"><?= $totalClaims ?></div>
+          <div class="stat-card__label"><?= $isAdminSide ? 'Total Claims' : 'My Total Claims' ?></div>
+          <div class="stat-card__delta">System Active</div>
         </div>
       </div>
-      <div class="stat-card stat-card--green">
+
+      <div class="stat-card stat-card--blue">
         <div class="stat-card__icon">✅</div>
         <div>
-          <div class="stat-card__value"><?= $itemsReturned ?></div>
-          <div class="stat-card__label">Items Returned</div>
-          <div class="stat-card__delta">▲ 19% from last month</div>
+          <div class="stat-card__value" id="stat-items-returned"><?= $itemsReturned ?></div>
+          <div class="stat-card__label"><?= $isAdminSide ? 'Items Returned' : 'Successful Claims' ?></div>
+          <div class="stat-card__delta">Verified Returns</div>
         </div>
       </div>
     </section>
 
-    <!-- row 1 -->
-    <section class="dash-grid" style="margin-bottom:16px;">
+    <section class="dash-grid<?= $isAdminSide ? '' : ' dash-grid--2col' ?>" style="margin-bottom:16px;">
       <div class="card">
         <div class="card__header">
           <h3>Items Overview</h3>
-          <select style="border:1px solid var(--c-border); border-radius:8px; padding:4px 8px; font-size:12.5px;">
-            <option>This Month</option>
-          </select>
+          <span style="font-size:12px; color:var(--c-text-muted);">Last 7 Days</span>
         </div>
-        <canvas id="itemsOverviewChart" height="180"></canvas>
+        <div style="position: relative; width: 100%; height: 220px;">
+          <canvas id="itemsOverviewChart"></canvas>
+        </div>
       </div>
 
       <div class="card">
         <div class="card__header">
           <h3>Recent Found Items</h3>
-          <?php if (role_is_admin_side($role)): ?>
+          <?php if ($isAdminSide): ?>
             <a href="found-items.php" class="card__link">View All</a>
           <?php endif; ?>
         </div>
-        <?php foreach ($recentFound as $item): ?><div class="found-item-row">
-          <div class="found-item-row__thumb">📦</div><div class="found-item-row__meta"><strong><?= h($item['item_name']) ?></strong><small><?= h($item['location_found']) ?> · <?= h(date('M j', strtotime($item['date_found']))) ?></small></div><span class="badge <?= $item['status'] === 'claimed' ? 'badge--green' : 'badge--amber' ?>"><?= h(ucwords(str_replace('_', ' ', $item['status']))) ?></span>
-        </div><?php endforeach; ?>
+        
+        <div id="recent-found-list">
+        <?php if (empty($recentFound)): ?>
+          <div style="text-align:center; padding: 24px 0; color:var(--c-text-muted); font-size:13px;">
+            <div style="font-size:24px; margin-bottom:4px;">📥</div>
+            No recently found items recorded.
+          </div>
+        <?php else: ?>
+          <?php foreach ($recentFound as $item): ?>
+            <div class="found-item-row">
+              <div class="found-item-row__thumb">📦</div>
+              <div class="found-item-row__meta">
+                <strong><?= h(mask_item_name($item['item_name'], $isAdminSide)) ?></strong>
+                <small><?= h($item['location_found']) ?> · <?= h(date('M j', strtotime($item['date_found']))) ?></small>
+              </div>
+              <span class="badge <?= $item['status'] === 'claimed' ? 'badge--green' : 'badge--amber' ?>">
+                <?= h(ucwords(str_replace('_', ' ', $item['status']))) ?>
+              </span>
+            </div>
+          <?php endforeach; ?>
+        <?php endif; ?>
+        </div>
       </div>
 
-      <?php if (role_is_admin_side($role)): ?>
+      <?php if ($isAdminSide): ?>
       <div class="card">
         <div class="card__header">
           <h3>Pending Verifications</h3>
@@ -116,48 +203,81 @@ for ($i = 6; $i >= 0; $i--) { $day = date('Y-m-d', strtotime("-{$i} days")); $da
         </div>
         <div class="verif-row">
           <div class="verif-row__icon" style="background:var(--c-info-bg);">🔐</div>
-          <div class="verif-row__meta"><strong>Claims Awaiting Review</strong><small><?= $pendingCount ?> claim(s) need a decision</small></div>
+          <div class="verif-row__meta">
+            <strong>Claims Awaiting Review</strong>
+            <small id="pending-claims-count"><?= $pendingCount ?> claim(s) need a decision</small>
+          </div>
         </div>
         <div class="verif-row">
           <div class="verif-row__icon" style="background:var(--c-gold-soft);">🔤</div>
-          <div class="verif-row__meta"><strong>Manual Review</strong><small>Security can inspect submitted answers</small></div>
+          <div class="verif-row__meta">
+            <strong>Manual Review</strong>
+            <small>Security can inspect submitted answers</small>
+          </div>
         </div>
         <div class="verif-row">
           <div class="verif-row__icon" style="background:var(--c-purple-bg);">👤</div>
-          <div class="verif-row__meta"><strong>Protected Workflow</strong><small>Claim decisions are recorded securely</small></div>
+          <div class="verif-row__meta">
+            <strong>Protected Workflow</strong>
+            <small>Claim decisions are recorded securely</small>
+          </div>
         </div>
       </div>
       <?php endif; ?>
     </section>
 
-    <!-- row 2 -->
-    <section class="dash-grid">
+    <section class="dash-grid<?= $isAdminSide ? '' : ' dash-grid--2col' ?>">
       <div class="card">
-        <div class="card__header"><h3>Items by Category</h3></div>
-        <div style="display:flex; align-items:center; gap:18px;">
-          <div style="position:relative; width:150px; height:150px;">
+        <div class="card__header">
+          <h3>Items by Category</h3>
+        </div>
+        <div style="display:grid; grid-template-columns: 132px minmax(0, 1fr); align-items:center; gap:18px; margin:auto 0;">
+          <div style="position:relative; width:132px; height:132px;">
             <canvas id="categoryChart"></canvas>
           </div>
-          <ul style="list-style:none; padding:0; margin:0; font-size:12.5px; flex:1;">
-            <?php foreach ($categoryCounts as $category => $count): ?><li><?= h($category) ?> — <?= $count ?></li><?php endforeach; ?>
+          <ul style="list-style:none; padding:0; margin:0; font-size:12.5px; display:flex; flex-direction:column; gap:8px; min-width:0;">
+            <?php 
+              $palette = ['#2E6FF2', '#F5A623', '#7C5CFC', '#17A673', '#C7CDD9', '#1F2A3D'];
+              $i = 0;
+              foreach ($categoryCounts as $category => $count): 
+                $color = $palette[$i % count($palette)];
+                $i++;
+            ?>
+              <li style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                <span style="display:inline-flex; align-items:center; gap:8px; text-align:left; min-width:0;">
+                  <span style="width:8px; height:8px; border-radius:50%; background:<?= $color ?>; flex-shrink:0;"></span>
+                  <span><?= h($category) ?></span>
+                </span>
+                <strong style="font-size:12.5px; color:var(--c-text-muted); flex-shrink:0;" data-category-count="<?= h($category) ?>"><?= $count ?></strong>
+              </li>
+            <?php endforeach; ?>
           </ul>
         </div>
       </div>
 
       <div class="card">
-        <div class="card__header"><h3>Quick Actions</h3></div>
+        <div class="card__header">
+          <h3>Quick Actions</h3>
+        </div>
         <div class="quick-actions-grid">
-          <?php if (role_is_admin_side($role)): ?>
-            <a href="found-items.php" class="quick-action"><span class="qa-icon">📦</span>Log Found Item</a>
+          <?php if ($isAdminSide): ?>
+            <a href="found-items.php?action=new" class="quick-action">
+              <span class="qa-icon">📦</span>Log Found Item
+            </a>
           <?php endif; ?>
-          <a href="lost-items.php" class="quick-action"><span class="qa-icon">🔍</span>Log Lost Item</a>
-          <?php if (role_is_admin_side($role)): ?>
-            <a href="claims.php" class="quick-action"><span class="qa-icon">🛡️</span>Review Claims</a>
+          <a href="lost-items.php?action=new" class="quick-action">
+            <span class="qa-icon">🔍</span>Log Lost Item
+          </a>
+          <?php if ($isAdminSide): ?>
+            <a href="claims.php" class="quick-action">
+              <span class="qa-icon">🛡️</span>Review Claims
+            </a>
           <?php endif; ?>
         </div>
       </div>
 
-      <div style="display:flex; flex-direction:column; gap:16px;">
+      <?php if ($isAdminSide): ?>
+      <div class="dash-status-stack">
         <div class="system-status-card">
           <div style="font-size:22px;">🛡️</div>
           <h3>All Systems Secure</h3>
@@ -171,24 +291,19 @@ for ($i = 6; $i >= 0; $i--) { $day = date('Y-m-d', strtotime("-{$i} days")); $da
             <span class="integration-row__name">🔵 Google Login (OAuth2)</span>
             <span class="status-connected"><span class="status-dot"></span> Connected</span>
           </div>
+          <div class="integration-row" style="margin-top:8px;">
+            <span class="integration-row__name">⚡ Pusher WebSockets</span>
+            <span class="status-connected" id="pusher-status"><span class="status-dot"></span> Active</span>
+          </div>
         </div>
         <?php endif; ?>
       </div>
+      <?php endif; ?>
     </section>
-
-    <div class="bottom-banner">
-      <span style="font-size:26px;">🛡️</span>
-      <div>
-        <strong>Fraud-Proof. Privacy-First. Campus Trusted.</strong>
-        <span>Retrieva uses zero-knowledge verification, smart masking, and secure integrations so every item gets back to its rightful owner.</span>
-      </div>
-    </div>
   </main>
 </div>
 
 <?php
-// First-login prompts: student ID takes priority over the password
-// popup, and only one is ever shown per page load.
 if ($role === 'student' && empty($user['student_id'])) {
     include __DIR__ . '/components/student-id-modal.php';
 } elseif ($user['auth_provider'] === 'google' && !$user['password_is_set'] && !$user['skip_password_prompt']) {
@@ -197,32 +312,81 @@ if ($role === 'student' && empty($user['student_id'])) {
 ?>
 
 <script src="dashboard.js"></script>
+
 <script>
-  // Local chart rendering — decorative only, wire up to real DB totals later.
   window.addEventListener('DOMContentLoaded', () => {
+    // 1. Line Chart rendering
     const ctx1 = document.getElementById('itemsOverviewChart');
     if (ctx1 && window.Chart) {
-      new Chart(ctx1, {
+      window.retrievaLineChart = new Chart(ctx1, {
         type: 'line',
         data: {
           labels: <?= json_encode($days) ?>,
           datasets: [
-            { label: 'Found Items', data: <?= json_encode($foundSeries) ?>, borderColor: '#2E6FF2', backgroundColor: 'rgba(46,111,242,0.08)', tension: 0.35, fill: true },
-            { label: 'Lost Items', data: <?= json_encode($lostSeries) ?>, borderColor: '#F5A623', backgroundColor: 'rgba(245,166,35,0.08)', tension: 0.35, fill: true },
+            { 
+              label: 'Found Items', 
+              data: <?= json_encode($foundSeries) ?>, 
+              borderColor: '#2E6FF2', 
+              backgroundColor: 'rgba(46,111,242,0.10)', 
+              tension: 0.35, 
+              fill: true,
+              pointBackgroundColor: '#2E6FF2',
+              pointBorderColor: '#FFFFFF'
+            },
+            { 
+              label: 'Lost Items', 
+              data: <?= json_encode($lostSeries) ?>, 
+              borderColor: '#F5A623', 
+              backgroundColor: 'rgba(245,166,35,0.10)', 
+              tension: 0.35, 
+              fill: true,
+              pointBackgroundColor: '#F5A623',
+              pointBorderColor: '#FFFFFF'
+            },
           ],
         },
-        options: { plugins: { legend: { position: 'top', align: 'end', labels: { boxWidth: 10 } } }, scales: { y: { beginAtZero: true } } },
+        options: { 
+          responsive: true,
+          maintainAspectRatio: false,
+          resizeDelay: 100,
+          animation: { duration: 600, easing: 'easeOutQuart' },
+          interaction: { mode: 'index', intersect: false },
+          elements: {
+            point: { radius: 3, hoverRadius: 7, hoverBorderWidth: 2, hitRadius: 12 }
+          },
+          plugins: {
+            legend: { position: 'top', align: 'end', labels: { boxWidth: 10, usePointStyle: true } },
+            tooltip: { backgroundColor: '#1F2A3D', padding: 10, cornerRadius: 8, displayColors: true }
+          }, 
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } 
+        },
       });
     }
+
+    // 2. Donut Chart rendering
     const ctx2 = document.getElementById('categoryChart');
     if (ctx2 && window.Chart) {
-      new Chart(ctx2, {
+      window.retrievaCategoryChart = new Chart(ctx2, {
         type: 'doughnut',
         data: {
-          labels: ['Electronics','Clothing','IDs & Cards','Accessories','Books & Papers','Others'],
-          datasets: [{ data: <?= json_encode(array_values($categoryCounts)) ?>, backgroundColor: ['#2E6FF2','#F5A623','#7C5CFC','#17A673','#C7CDD9','#1F2A3D'], borderWidth: 0 }],
+          labels: <?= json_encode(array_keys($categoryCounts)) ?>,
+          datasets: [{ 
+            data: <?= json_encode(array_values($categoryCounts)) ?>, 
+            backgroundColor: ['#2E6FF2','#F5A623','#7C5CFC','#17A673','#C7CDD9','#1F2A3D'], 
+            borderWidth: 0,
+            hoverOffset: 10
+          }],
         },
-        options: { cutout: '68%', plugins: { legend: { display: false } } },
+        options: { 
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '70%', 
+          animation: { animateRotate: true, animateScale: true, duration: 650 },
+          plugins: {
+            legend: { display: false },
+            tooltip: { backgroundColor: '#1F2A3D', padding: 10, cornerRadius: 8 }
+          } 
+        },
       });
     }
   });

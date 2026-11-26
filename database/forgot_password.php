@@ -3,12 +3,18 @@ declare(strict_types=1);
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/totp_helper.php';
 require_once __DIR__ . '/mailer.php';
+require_once __DIR__ . '/recaptcha_helper.php';
 
 start_session();
 header('Content-Type: application/json');
 
-$input = json_decode(file_get_contents('php://input'), true) ?? [];
-$email = trim((string)($input['email'] ?? ''));
+$input          = json_decode(file_get_contents('php://input'), true) ?? [];
+$email          = trim((string)($input['email'] ?? ''));
+$recaptchaToken = (string)($input['recaptcha_token'] ?? '');
+
+if (!verify_recaptcha_token($recaptchaToken)) {
+    json_out(['success' => false, 'message' => 'reCAPTCHA verification failed. Please complete the checkbox and try again.'], 400);
+}
 
 $stmt = get_db()->prepare('SELECT id, email FROM users WHERE email = ? AND auth_provider = "local"');
 $stmt->execute([$email]);
