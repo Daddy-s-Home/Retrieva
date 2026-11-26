@@ -76,6 +76,7 @@ if (!$user) {
 }
 
 // Google sign-in skips TOTP entirely, as specified.
+$db->prepare('UPDATE users SET email_verified = 1, last_login_at = NOW() WHERE id = ?')->execute([$userId]);
 $_SESSION['user_id'] = $userId;
 $_SESSION['role']    = $role;
 $_SESSION['name']    = $googleUser->getName() ?: $email;

@@ -25,6 +25,10 @@ function role_is_admin_side(string $role): bool {
     return role_can($role, RETRIEVA_ADMIN_ROLES);
 }
 
+function role_is_administrator(string $role): bool {
+    return $role === 'admin';
+}
+
 function role_label(string $role): string {
     return ucfirst($role);
 }

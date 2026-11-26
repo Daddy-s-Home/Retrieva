@@ -5,19 +5,24 @@ require_once __DIR__ . '/../database/db.php';
 start_session();
 
 // Already fully signed in? Nothing to verify — go straight to the dashboard.
-if (has_session_id('user_id')) {
+if (session_id_present('user_id')) {
     header('Location: ../dashboard/index.php');
     exit;
 }
 
 // No pending login or password-reset challenge? Send them back to start the flow properly.
-if (!has_session_id('pending_totp_user_id') && !has_session_id('pending_reset_user_id')) {
+if (!session_id_present('pending_totp_user_id') && !session_id_present('pending_reset_user_id')) {
     header('Location: login.php');
     exit;
 }
 
 $rawPrefill = trim((string) ($_GET['code'] ?? ''));
 $prefillDigits = preg_match('/^\d{6}$/', $rawPrefill) ? str_split($rawPrefill) : [];
+$factor = ($_SESSION['pending_login_factor'] ?? 'email') === 'totp' ? 'totp' : 'email';
+$isReset = session_id_present('pending_reset_user_id');
+$canSwitch = !$isReset;
+$showResend = $factor === 'email' && !$isReset;
+$switchTo = $factor === 'totp' ? 'email' : 'totp';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -48,7 +53,7 @@ $prefillDigits = preg_match('/^\d{6}$/', $rawPrefill) ? str_split($rawPrefill) :
       </div>
 
       <h1>Two-Factor Security</h1>
-      <p class="subtitle">Enter the 6-digit verification code sent to your email</p>
+      <p class="subtitle"><?= $factor === 'totp' ? 'Enter the 6-digit code from your authenticator app' : 'Enter the 6-digit verification code sent to your email' ?></p>
 
       <form id="totp-form">
         <div class="totp-boxes">
@@ -64,13 +69,22 @@ $prefillDigits = preg_match('/^\d{6}$/', $rawPrefill) ? str_split($rawPrefill) :
             >
           <?php endfor; ?>
         </div>
-        
-        <p class="totp-sync-note" style="margin-top: 14px; margin-bottom: 14px;">⏱ Code expires in 5 minutes</p>
+
+        <?php if ($showResend): ?>
+        <p class="totp-resend"><button type="button" class="text-link" id="resend-code">Resend</button></p>
+        <?php endif; ?>
+        <p class="totp-sync-note" style="margin-top: 14px; margin-bottom: 14px;">⏱ <?= $factor === 'totp' ? 'The authenticator code refreshes every 30 seconds' : 'Code expires in 5 minutes' ?></p>
         <button type="submit" class="btn btn-primary" style="margin-bottom: 10px;">Verify Code</button>
         <button type="button" id="totp-paste-btn" class="btn btn-oauth" style="margin-bottom: 0;">Paste Code</button>
       </form>
 
-      <p class="auth-card__footer-note" style="text-align: center; margin-top: 24px;">
+      <?php if ($canSwitch): ?>
+      <p class="auth-card__footer-note" style="text-align: center; margin-top: 16px;">
+        <button type="button" class="text-link" id="switch-factor" data-factor="<?= h($switchTo) ?>"><?= $factor === 'totp' ? 'Use Email OTP for Authentication' : 'Use TOTP for Authentication' ?></button>
+      </p>
+      <?php endif; ?>
+
+      <p class="auth-card__footer-note" style="text-align: center; margin-top: 16px;">
         <a href="login.php" class="text-link">Back to login</a>
       </p>
     </div>

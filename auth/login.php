@@ -13,7 +13,8 @@ if (file_exists($autoloader)) {
     require_once $autoloader;
 }
 
-if (has_session_id('user_id')) {
+// Already signed in? Skip straight to the dashboard.
+if (session_id_present('user_id')) {
     header('Location: ../dashboard/index.php');
     exit;
 }

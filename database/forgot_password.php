@@ -27,7 +27,6 @@ if ($user) {
     $code   = totp_code($secret);
 
     $db = get_db();
-    $db->prepare('UPDATE users SET totp_secret = ? WHERE id = ?')->execute([$secret, $user['id']]);
     $db->prepare(
         'INSERT INTO totp_challenges (user_id, code_hash, purpose, expires_at) VALUES (?, ?, "password_reset", DATE_ADD(NOW(), INTERVAL 5 MINUTE))'
     )->execute([$user['id'], password_hash($code, PASSWORD_BCRYPT)]);

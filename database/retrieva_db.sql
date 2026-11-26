@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 01, 2026 at 02:47 PM
--- Server version: 10.4.28-MariaDB
--- PHP Version: 8.2.4
+-- Generation Time: Sep 28, 2026 at 01:04 PM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -81,7 +81,106 @@ INSERT INTO `audit_trail` (`id`, `user_id`, `action`, `details`, `ip_address`, `
 (37, 2, 'login_failed', 'Invalid password attempt (1/5)', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36', '2026-09-01 12:30:57'),
 (38, 2, 'login_password_ok', 'Password verified, TOTP sent.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36', '2026-09-01 12:31:03'),
 (39, 2, 'login_success', 'TOTP verified, session started.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36', '2026-09-01 12:31:09'),
-(40, 2, 'logout', '', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36', '2026-09-01 12:31:12');
+(40, 2, 'logout', '', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36', '2026-09-01 12:31:12'),
+(41, 3, 'google_signup', 'rpapa.k12150334@umak.edu.ph', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Mobile Safari/537.36', '2026-09-01 13:22:57'),
+(42, 3, 'student_id_set', 'Student ID recorded: K12150334', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Mobile Safari/537.36', '2026-09-01 13:23:07'),
+(43, 3, 'logout', '', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36', '2026-09-01 13:32:01'),
+(44, 3, 'google_login', 'rpapa.k12150334@umak.edu.ph', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/3.22.7 Chrome/148.0.7778.280 Electron/42.10.0 Safari/537.36', '2026-09-28 01:00:25'),
+(45, 3, 'google_login', 'rpapa.k12150334@umak.edu.ph', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 01:33:51'),
+(46, 2, 'lost_item_reported', 'VERIFY-24ae3482', '::1', NULL, '2026-09-28 02:38:24'),
+(47, 2, 'lost_item_updated', 'item=1', '::1', NULL, '2026-09-28 02:38:24'),
+(48, 2, 'claim_filed', 'found_item=1', '::1', NULL, '2026-09-28 02:38:24'),
+(49, 2, 'claim_withdrawn', 'claim=1', '::1', NULL, '2026-09-28 02:38:24'),
+(50, 2, 'password_set', 'Password created/updated by user.', '::1', NULL, '2026-09-28 02:38:24'),
+(51, 2, 'password_changed', 'Password changed from account settings.', '::1', NULL, '2026-09-28 02:38:25'),
+(52, 2, 'lost_item_deleted', 'item=1', '::1', NULL, '2026-09-28 02:38:25'),
+(53, 3, 'privacy_updated', 'Lost reports are listed on campus.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/3.22.7 Chrome/148.0.7778.280 Electron/42.10.0 Safari/537.36', '2026-09-28 02:52:14'),
+(54, 3, 'privacy_updated', 'Lost reports are listed on campus.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/3.22.7 Chrome/148.0.7778.280 Electron/42.10.0 Safari/537.36', '2026-09-28 02:53:57'),
+(55, 3, 'profile_updated', 'Updated phone and department.', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', '2026-09-28 02:56:48'),
+(56, 3, 'lost_item_reported', 'StudentID', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', '2026-09-28 02:57:31'),
+(57, 3, 'password_set', 'Password created/updated by user.', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', '2026-09-28 02:58:16'),
+(58, 3, 'notification_prefs_updated', 'Updated notification preferences.', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', '2026-09-28 02:58:51'),
+(59, 3, 'notification_prefs_updated', 'Updated notification preferences.', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', '2026-09-28 02:58:57'),
+(60, 3, 'login_password_ok', 'Password verified, email code sent.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 03:42:29'),
+(61, 3, 'login_failed', 'Invalid password attempt (1/5)', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 03:43:13'),
+(62, 3, 'login_password_ok', 'Password verified, email code sent.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 03:43:27'),
+(63, 3, 'login_success', 'Sign-in code verified, session started.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 03:44:07'),
+(64, 3, 'logout', '', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 03:44:10'),
+(65, 3, 'login_password_ok', 'Password verified, email code sent.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 03:45:14'),
+(66, 3, 'login_password_ok', 'Password verified, email code sent.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 03:54:43'),
+(67, 3, 'login_password_ok', 'Password verified, email code sent.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 03:56:15'),
+(68, 3, 'google_login', 'rpapa.k12150334@umak.edu.ph', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 04:01:45'),
+(69, 3, 'totp_disabled', 'Authenticator app disabled from account settings.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/3.22.7 Chrome/148.0.7778.280 Electron/42.10.0 Safari/537.36', '2026-09-28 04:03:58'),
+(70, 3, 'totp_disabled', 'Authenticator app disabled from account settings.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/3.22.7 Chrome/148.0.7778.280 Electron/42.10.0 Safari/537.36', '2026-09-28 04:04:03'),
+(71, 3, 'totp_enabled', 'Authenticator app enabled from account settings.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 04:11:18'),
+(72, 3, 'login_method_updated', 'Authenticator code is asked first.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 04:11:30'),
+(73, 3, 'logout', '', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 04:11:39'),
+(74, 3, 'login_password_ok', 'Password verified, authenticator code requested.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 04:11:49'),
+(75, 3, 'login_success', 'Sign-in code verified, session started.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 04:12:03'),
+(76, 3, 'logout', '', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 04:12:06'),
+(77, 3, 'password_set', 'Password created/updated by user.', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', '2026-09-28 04:13:11'),
+(78, 0, 'login_password_ok', 'Password verified, authenticator code requested.', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', '2026-09-28 04:14:13'),
+(79, 0, 'login_password_ok', 'Password verified, authenticator code requested.', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', '2026-09-28 04:16:30'),
+(80, 0, 'login_password_ok', 'Password verified, authenticator code requested.', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', '2026-09-28 04:16:48'),
+(81, 0, 'login_password_ok', 'Password verified, authenticator code requested.', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', '2026-09-28 04:40:33'),
+(82, 3, 'login_failed', 'Invalid password attempt (1/5)', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', '2026-09-28 04:40:52'),
+(83, 3, 'login_password_ok', 'Password verified, authenticator code requested.', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', '2026-09-28 04:40:59'),
+(84, 0, 'login_password_ok', 'Password verified, authenticator code requested.', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', '2026-09-28 04:42:22'),
+(85, 0, 'login_failed', 'Invalid password attempt (1/5)', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', '2026-09-28 04:42:53'),
+(86, 0, 'login_password_ok', 'Password verified, authenticator code requested.', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', '2026-09-28 04:42:58'),
+(87, 0, 'login_password_ok', 'Password verified, authenticator code requested.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 04:44:48'),
+(88, 0, 'login_password_ok', 'Password verified, authenticator code requested.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 04:50:14'),
+(89, 0, 'login_password_ok', 'Password verified, authenticator code requested.', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', '2026-09-28 04:50:28'),
+(90, 0, 'login_password_ok', 'Password verified, authenticator code requested.', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', '2026-09-28 04:50:58'),
+(91, 0, 'login_password_ok', 'Password verified, authenticator code requested.', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', '2026-09-28 04:51:24'),
+(92, 0, 'login_password_ok', 'Password verified, authenticator code requested.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 04:53:56'),
+(93, 0, 'login_success', 'Sign-in code verified, session started.', '::1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', '2026-09-28 04:59:06'),
+(94, 0, 'user_password_reset', 'user=3', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 06:23:29'),
+(95, 0, 'logout', '', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 06:53:35'),
+(96, 3, 'google_login', 'rpapa.k12150334@umak.edu.ph', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 06:53:43'),
+(97, 3, 'logout', '', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 06:54:18'),
+(98, 0, 'login_failed', 'Invalid password attempt (1/5)', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 06:54:50'),
+(99, 0, 'login_password_ok', 'Password verified, authenticator code requested.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 06:54:52'),
+(100, 0, 'login_success', 'Sign-in code verified, session started.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 06:55:16'),
+(101, 3, 'lost_item_reported', 'My Phone', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/3.22.7 Chrome/148.0.7778.280 Electron/42.10.0 Safari/537.36', '2026-09-28 07:39:06'),
+(102, 0, 'found_item_logged', 'Samsung Phone with large case', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 07:41:01'),
+(103, 0, 'matches_refreshed', 'suggestions=4', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 07:41:32'),
+(104, 0, 'matches_refreshed', 'suggestions=4', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 07:41:45'),
+(105, 0, 'matches_refreshed', 'suggestions=4', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 07:41:46'),
+(106, 0, 'match_notified', 'match=7', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 07:42:15'),
+(107, 3, 'claim_filed', 'found_item=10', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/3.22.7 Chrome/148.0.7778.280 Electron/42.10.0 Safari/537.36', '2026-09-28 07:42:57'),
+(108, 0, 'claim_information_requested', 'claim=6', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 07:43:19'),
+(109, 0, 'claim_approved', 'claim=6', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 07:44:43'),
+(110, 0, 'pickup_verified', 'pickup=3', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 07:46:52'),
+(111, 0, 'lost_report_updated', 'lost=15 status=matched', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 07:48:12'),
+(112, 0, 'lost_report_updated', 'lost=15 status=closed', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 07:49:17'),
+(113, 0, 'lost_report_updated', 'lost=15 status=matched', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 07:50:31'),
+(114, 0, 'lost_report_updated', 'lost=15 status=resolved', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 07:50:34'),
+(115, 0, 'lost_report_updated', 'lost=15 status=closed', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 07:50:37'),
+(116, 0, 'matches_refreshed', 'suggestions=3', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 07:52:53'),
+(117, 0, 'logout', '', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 08:06:10'),
+(118, 3, 'logout', '', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/3.22.7 Chrome/148.0.7778.280 Electron/42.10.0 Safari/537.36', '2026-09-28 08:06:15'),
+(119, 3, 'google_login', 'rpapa.k12150334@umak.edu.ph', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 10:26:39'),
+(120, 3, 'lost_item_reported', 'Android phone Samsung', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 10:30:38'),
+(121, 0, 'login_failed', 'Invalid password attempt (1/5)', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0', '2026-09-28 10:32:27'),
+(122, 0, 'login_password_ok', 'Password verified, authenticator code requested.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0', '2026-09-28 10:32:30'),
+(123, 0, 'login_success', 'Sign-in code verified, session started.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0', '2026-09-28 10:32:51'),
+(124, 0, 'logout', '', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0', '2026-09-28 10:35:43'),
+(125, 3, 'logout', '', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 10:35:48'),
+(126, 3, 'google_login', 'rpapa.k12150334@umak.edu.ph', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 10:36:19'),
+(127, 3, 'lost_item_reported', 'Envelop', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 10:44:05'),
+(128, 0, 'login_failed', 'Invalid password attempt (1/5)', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0', '2026-09-28 10:45:11'),
+(129, 0, 'login_password_ok', 'Password verified, authenticator code requested.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0', '2026-09-28 10:45:19'),
+(130, 0, 'login_success', 'Sign-in code verified, session started.', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0', '2026-09-28 10:45:43'),
+(131, 0, 'found_item_logged', 'Envelop with documents', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0', '2026-09-28 10:49:37'),
+(132, 0, 'matches_refreshed', 'suggestions=3', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0', '2026-09-28 10:49:54'),
+(133, 3, 'claim_filed', 'found_item=11', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', '2026-09-28 10:50:43'),
+(134, 0, 'claim_information_requested', 'claim=7', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0', '2026-09-28 10:51:20'),
+(135, 0, 'claim_approved', 'claim=7', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0', '2026-09-28 10:51:32'),
+(136, 0, 'matches_refreshed', 'suggestions=3', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0', '2026-09-28 10:51:37'),
+(137, 0, 'pickup_verified', 'pickup=4', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0', '2026-09-28 10:56:34'),
+(138, 0, 'lost_report_updated', 'lost=17 status=closed', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0', '2026-09-28 10:57:12'),
+(139, 0, 'matches_refreshed', 'suggestions=3', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0', '2026-09-28 10:57:41');
 
 -- --------------------------------------------------------
 
@@ -91,16 +190,31 @@ INSERT INTO `audit_trail` (`id`, `user_id`, `action`, `details`, `ip_address`, `
 
 CREATE TABLE `claims` (
   `id` int(10) UNSIGNED NOT NULL,
+  `public_code` varchar(30) DEFAULT NULL,
   `found_item_id` int(10) UNSIGNED NOT NULL,
   `claimant_id` int(10) UNSIGNED NOT NULL,
+  `lost_item_id` int(10) UNSIGNED DEFAULT NULL,
   `challenge_questions` text DEFAULT NULL,
   `claimant_answers` text DEFAULT NULL,
   `match_score` decimal(5,2) DEFAULT NULL,
   `status` enum('pending','manual_review','approved','rejected') NOT NULL DEFAULT 'pending',
+  `rejection_reason` varchar(500) DEFAULT NULL,
   `reviewed_by` int(10) UNSIGNED DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `reviewed_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `claims`
+--
+
+INSERT INTO `claims` (`id`, `public_code`, `found_item_id`, `claimant_id`, `lost_item_id`, `challenge_questions`, `claimant_answers`, `match_score`, `status`, `rejection_reason`, `reviewed_by`, `created_at`, `reviewed_at`) VALUES
+(2, 'CL-2026-101', 5, 2, 6, '[\"Describe the case.\"]', '[\"Blue case with a crack on the corner.\"]', 74.00, 'pending', NULL, NULL, '2026-09-28 08:30:00', NULL),
+(3, 'CL-2026-102', 4, 3, 4, '[\"Describe something attached to the bag.\"]', '[\"A small keychain on the zipper.\"]', 61.00, 'manual_review', NULL, 0, '2026-09-24 08:00:00', '2026-09-25 05:40:00'),
+(4, 'CL-2026-103', 8, 2, 5, '[\"Whose name is on the ID?\"]', '[\"The name matches the student record.\"]', 90.00, 'approved', NULL, 0, '2026-09-27 07:20:00', '2026-09-28 01:10:00'),
+(5, 'CL-2026-104', 9, 3, 11, '[\"Describe the case.\"]', '[\"Gray tablet in a keyboard case.\"]', 88.00, 'approved', NULL, 1, '2026-09-25 03:00:00', '2026-09-26 01:00:00'),
+(6, 'CL-2026-006', 10, 3, NULL, '[\"Describe an identifying detail about this item.\"]', '[\"it has stickers and large case\"]', NULL, 'approved', NULL, 0, '2026-09-28 07:42:57', '2026-09-28 07:44:43'),
+(7, 'CL-2026-007', 11, 3, NULL, '[\"Describe an identifying detail about this item.\"]', '[\"This envelop contains CTC of ROG and others stuff\"]', NULL, 'approved', NULL, 0, '2026-09-28 10:50:43', '2026-09-28 10:51:32');
 
 -- --------------------------------------------------------
 
@@ -110,17 +224,97 @@ CREATE TABLE `claims` (
 
 CREATE TABLE `found_items` (
   `id` int(10) UNSIGNED NOT NULL,
+  `public_code` varchar(30) DEFAULT NULL,
   `logged_by` int(10) UNSIGNED NOT NULL,
   `item_name` varchar(150) NOT NULL,
-  `category` enum('Electronics','Clothing','IDs & Cards','Accessories','Books & Papers','Others') NOT NULL,
+  `category` enum('Phone (Android)','Phone (Iphone)','Tablet','ID','Lace','Tumbler/Flask/Bottled Water','Bag','Shoes','Notebook','Book','Other') NOT NULL,
   `location_found` varchar(150) NOT NULL,
   `date_found` date NOT NULL,
   `photo_path` varchar(500) DEFAULT NULL,
+  `public_summary` varchar(500) DEFAULT NULL,
   `extracted_text` text DEFAULT NULL,
   `masked_features` text DEFAULT NULL,
-  `status` enum('unclaimed','pending_verification','claimed','disposed') NOT NULL DEFAULT 'unclaimed',
+  `status` enum('unclaimed','pending_verification','claimed','disposed','returned') NOT NULL DEFAULT 'unclaimed',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `found_items`
+--
+
+INSERT INTO `found_items` (`id`, `public_code`, `logged_by`, `item_name`, `category`, `location_found`, `date_found`, `photo_path`, `public_summary`, `extracted_text`, `masked_features`, `status`, `created_at`) VALUES
+(3, 'F-2026-101', 0, 'Blue tumbler', 'Tumbler/Flask/Bottled Water', 'Cafeteria', '2026-09-27', 'uploads/lost/sample-bottle.jpg', 'A blue tumbler. Some markings are hidden.', NULL, 'Sticker on the lid', 'unclaimed', '2026-09-27 02:05:00'),
+(4, 'F-2026-102', 0, 'Black backpack', 'Bag', 'Library', '2026-09-24', 'uploads/lost/sample-bag.jpg', 'A black backpack. Contents are not listed.', NULL, 'Small keychain on the zipper', 'pending_verification', '2026-09-24 07:35:00'),
+(5, 'F-2026-103', 0, 'Android phone', 'Phone (Android)', 'Gymnasium', '2026-09-28', 'uploads/found/sample-phone.jpg', 'A dark phone. The wallpaper is hidden.', NULL, 'Blue case', 'pending_verification', '2026-09-28 03:15:00'),
+(6, 'F-2026-104', 0, 'Green notebook', 'Notebook', 'HSU Lobby', '2026-09-25', 'uploads/found/sample-notebook.jpg', 'A green notebook. Written pages are hidden.', NULL, 'Name on the inside cover', 'unclaimed', '2026-09-25 00:45:00'),
+(7, 'F-2026-105', 0, 'White sneakers', 'Shoes', 'University Oval', '2026-09-27', 'uploads/found/sample-shoes.jpg', 'A pair of white sneakers.', NULL, 'Size written inside', 'unclaimed', '2026-09-27 08:50:00'),
+(8, 'F-2026-106', 1, 'Student ID', 'ID', 'Admin Building', '2026-09-25', NULL, 'A campus ID. The name and photo are hidden.', NULL, 'Clear plastic holder', 'claimed', '2026-09-25 05:10:00'),
+(9, 'F-2026-107', 0, 'Tablet', 'Tablet', 'AVR', '2026-09-24', NULL, 'A gray tablet. The lock screen is hidden.', NULL, 'Keyboard case', 'returned', '2026-09-24 01:25:00'),
+(10, 'F-2026-010', 0, 'Samsung Phone with large case', 'Phone (Android)', 'Admin 3rd floor', '2026-09-28', 'uploads/found/found_45558335300552f5.jpg', 'Has stickers', NULL, NULL, 'returned', '2026-09-28 07:41:01'),
+(11, 'F-2026-011', 0, 'Envelop with documents', 'Other', 'Academic Building 2', '2026-09-28', 'uploads/found/found_2c2c1512788ba8ae.jpg', 'Documents having CTC copy ROG and etc', NULL, NULL, 'returned', '2026-09-28 10:49:37');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `item_images`
+--
+
+CREATE TABLE `item_images` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `entity_type` enum('lost','found') NOT NULL,
+  `entity_id` int(10) UNSIGNED NOT NULL,
+  `photo_path` varchar(500) NOT NULL,
+  `sort_order` int(10) UNSIGNED NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `item_images`
+--
+
+INSERT INTO `item_images` (`id`, `entity_type`, `entity_id`, `photo_path`, `sort_order`, `created_at`) VALUES
+(2, 'lost', 15, 'uploads/lost/lost_8bd3fd552e739c88.jpg', 0, '2026-09-28 07:39:06'),
+(3, 'lost', 15, 'uploads/lost/lost_d95a5019a7107d76.jpg', 1, '2026-09-28 07:39:06'),
+(4, 'found', 10, 'uploads/found/found_45558335300552f5.jpg', 0, '2026-09-28 07:41:01'),
+(5, 'lost', 16, 'uploads/lost/lost_3d0b70c5119b5b91.jpg', 0, '2026-09-28 10:30:38'),
+(6, 'lost', 16, 'uploads/lost/lost_38ad1c425515a632.jpg', 1, '2026-09-28 10:30:38'),
+(7, 'lost', 16, 'uploads/lost/lost_8d55f0d39f73d891.jpg', 2, '2026-09-28 10:30:38'),
+(8, 'lost', 16, 'uploads/lost/lost_31d77565fb8bc099.jpg', 3, '2026-09-28 10:30:38'),
+(9, 'lost', 16, 'uploads/lost/lost_63ac52bd57cf2990.jpg', 4, '2026-09-28 10:30:38'),
+(10, 'lost', 17, 'uploads/lost/lost_f0134b0301806ec5.jpg', 0, '2026-09-28 10:44:05'),
+(11, 'lost', 17, 'uploads/lost/lost_a4dc5446c28cd7a0.jpg', 1, '2026-09-28 10:44:05'),
+(12, 'found', 11, 'uploads/found/found_2c2c1512788ba8ae.jpg', 0, '2026-09-28 10:49:37'),
+(13, 'found', 11, 'uploads/found/found_c2c600906a8cfc20.jpg', 1, '2026-09-28 10:49:37'),
+(14, 'found', 11, 'uploads/found/found_9afa0da282dc87a9.jpg', 2, '2026-09-28 10:49:37');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `item_matches`
+--
+
+CREATE TABLE `item_matches` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `lost_item_id` int(10) UNSIGNED NOT NULL,
+  `found_item_id` int(10) UNSIGNED NOT NULL,
+  `score` decimal(5,2) NOT NULL DEFAULT 0.00,
+  `status` enum('potential','needs_review','confirmed','no_match') NOT NULL DEFAULT 'potential',
+  `similarity_json` text DEFAULT NULL,
+  `reviewed_by` int(10) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `item_matches`
+--
+
+INSERT INTO `item_matches` (`id`, `lost_item_id`, `found_item_id`, `score`, `status`, `similarity_json`, `reviewed_by`, `created_at`, `updated_at`) VALUES
+(1, 3, 3, 100.00, 'potential', '[\"Same category\",\"Name looks similar\",\"Location overlaps\"]', NULL, '2026-09-27 02:30:00', '2026-09-28 10:57:41'),
+(2, 4, 4, 68.00, 'potential', '[\"Same category\",\"Name looks similar\",\"Location overlaps\"]', NULL, '2026-09-24 08:10:00', '2026-09-25 05:40:00'),
+(3, 9, 7, 100.00, 'no_match', '[\"Same category\",\"Name looks similar\",\"Location overlaps\"]', 0, '2026-09-27 09:05:00', '2026-09-28 10:57:41'),
+(5, 8, 6, 88.00, 'potential', '[\"Same category\",\"Name looks similar\",\"Location overlaps\"]', NULL, '2026-09-28 07:41:32', '2026-09-28 10:57:41'),
+(7, 15, 10, 60.00, 'potential', '[\"Same category\",\"Location overlaps\"]', NULL, '2026-09-28 07:41:32', '2026-09-28 07:41:46');
 
 -- --------------------------------------------------------
 
@@ -130,15 +324,86 @@ CREATE TABLE `found_items` (
 
 CREATE TABLE `lost_items` (
   `id` int(10) UNSIGNED NOT NULL,
+  `public_code` varchar(30) DEFAULT NULL,
   `reported_by` int(10) UNSIGNED NOT NULL,
   `item_name` varchar(150) NOT NULL,
-  `category` enum('Electronics','Clothing','IDs & Cards','Accessories','Books & Papers','Others') NOT NULL,
+  `category` enum('Phone (Android)','Phone (Iphone)','Tablet','ID','Lace','Tumbler/Flask/Bottled Water','Bag','Shoes','Notebook','Book','Other') NOT NULL,
   `last_seen_location` varchar(150) DEFAULT NULL,
   `date_lost` date NOT NULL,
+  `photo_path` varchar(500) DEFAULT NULL,
   `description` text DEFAULT NULL,
-  `status` enum('searching','matched','resolved') NOT NULL DEFAULT 'searching',
+  `closed_reason` varchar(255) DEFAULT NULL,
+  `matched_found_item_id` int(10) UNSIGNED DEFAULT NULL,
+  `matched_at` datetime DEFAULT NULL,
+  `verified_at` datetime DEFAULT NULL,
+  `resolved_at` datetime DEFAULT NULL,
+  `closed_at` datetime DEFAULT NULL,
+  `is_public` tinyint(1) NOT NULL DEFAULT 1,
+  `status` enum('searching','matched','resolved','closed') NOT NULL DEFAULT 'searching',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `lost_items`
+--
+
+INSERT INTO `lost_items` (`id`, `public_code`, `reported_by`, `item_name`, `category`, `last_seen_location`, `date_lost`, `photo_path`, `description`, `closed_reason`, `matched_found_item_id`, `matched_at`, `verified_at`, `resolved_at`, `closed_at`, `is_public`, `status`, `created_at`) VALUES
+(2, 'LR-2026-002', 3, 'StudentID', 'ID', 'ADMIN', '2026-09-28', 'uploads/lost/lost_4d516da6f84afe7e.png', 'LOST ID', NULL, NULL, NULL, NULL, NULL, NULL, 1, 'searching', '2026-09-28 02:57:31'),
+(3, 'LR-2026-101', 2, 'Blue tumbler', 'Tumbler/Flask/Bottled Water', 'Cafeteria', '2026-09-26', 'uploads/lost/sample-bottle.jpg', 'Blue tumbler left on a cafeteria table.', NULL, NULL, NULL, NULL, NULL, NULL, 1, 'searching', '2026-09-26 00:15:00'),
+(4, 'LR-2026-102', 3, 'Black backpack', 'Bag', 'Library', '2026-09-24', 'uploads/lost/sample-bag.jpg', 'Black backpack with a front zipper pocket.', NULL, NULL, NULL, NULL, NULL, NULL, 1, 'searching', '2026-09-24 03:40:00'),
+(5, 'LR-2026-103', 2, 'Student ID', 'ID', 'Admin Building', '2026-09-27', NULL, 'UMak student ID in a clear plastic holder.', NULL, 8, '2026-09-27 15:00:00', '2026-09-28 09:10:00', NULL, NULL, 1, 'matched', '2026-09-27 01:05:00'),
+(6, 'LR-2026-104', 2, 'Android phone', 'Phone (Android)', 'Gymnasium', '2026-09-25', 'uploads/found/sample-phone.jpg', 'Dark Android phone in a blue case.', NULL, 5, '2026-09-28 16:10:00', NULL, NULL, NULL, 1, 'matched', '2026-09-25 08:20:00'),
+(7, 'LR-2026-105', 3, 'iPhone', 'Phone (Iphone)', 'CAS Building', '2026-09-28', NULL, 'Silver iPhone last seen in a classroom.', NULL, NULL, NULL, NULL, NULL, NULL, 1, 'searching', '2026-09-27 23:50:00'),
+(8, 'LR-2026-106', 2, 'Spiral notebook', 'Notebook', 'HSU Lobby', '2026-09-24', 'uploads/found/sample-notebook.jpg', 'Green spiral notebook with class notes.', NULL, NULL, NULL, NULL, NULL, NULL, 1, 'searching', '2026-09-24 06:10:00'),
+(9, 'LR-2026-107', 3, 'White sneakers', 'Shoes', 'University Oval', '2026-09-26', 'uploads/found/sample-shoes.jpg', 'Pair of white sneakers left by the bleachers.', NULL, NULL, NULL, NULL, NULL, NULL, 1, 'searching', '2026-09-26 05:25:00'),
+(10, 'LR-2026-108', 2, 'Lace ribbon', 'Lace', 'Auditorium', '2026-09-27', NULL, 'White lace ribbon from a costume.', NULL, NULL, NULL, NULL, NULL, NULL, 0, 'searching', '2026-09-27 10:05:00'),
+(11, 'LR-2026-109', 3, 'Tablet', 'Tablet', 'AVR', '2026-09-24', NULL, 'Gray tablet in a keyboard case.', NULL, 9, '2026-09-25 10:20:00', '2026-09-26 09:00:00', '2026-09-27 14:12:00', NULL, 1, 'resolved', '2026-09-24 02:30:00'),
+(12, 'LR-2026-110', 2, 'Math textbook', 'Book', 'Library, 2nd floor', '2026-09-28', 'uploads/found/sample-notebook.jpg', 'Hardcover math textbook.', NULL, NULL, NULL, NULL, NULL, NULL, 1, 'searching', '2026-09-28 04:45:00'),
+(13, 'LR-2026-111', 3, 'Folding umbrella', 'Other', 'Gate 2', '2026-09-25', NULL, 'Black folding umbrella.', 'Owner recovered it elsewhere.', NULL, NULL, NULL, NULL, '2026-09-26 09:30:00', 1, 'closed', '2026-09-25 01:15:00'),
+(14, 'LR-2026-112', 2, 'Steel flask', 'Tumbler/Flask/Bottled Water', 'Engineering Building', '2026-09-26', 'uploads/lost/sample-bottle.jpg', 'Silver flask.', 'Report closed after a week with no match.', NULL, NULL, NULL, NULL, '2026-09-28 15:20:00', 1, 'closed', '2026-09-26 09:40:00'),
+(15, 'LR-2026-015', 3, 'My Phone', 'Phone (Android)', 'Admin', '2026-09-28', 'uploads/lost/lost_8bd3fd552e739c88.jpg', 'Drop it somewhere, has sticker on it', 'Item Returned', NULL, '2026-09-28 15:48:12', NULL, '2026-09-28 15:50:34', '2026-09-28 15:49:17', 1, 'closed', '2026-09-28 07:39:06'),
+(16, 'LR-2026-016', 3, 'Android phone Samsung', 'Phone (Android)', '4th HPSB', '2026-09-28', 'uploads/lost/lost_3d0b70c5119b5b91.jpg', '13:00pm at HPSB stair', NULL, NULL, NULL, NULL, NULL, NULL, 1, 'searching', '2026-09-28 10:30:38'),
+(17, 'LR-2026-017', 3, 'Envelop', 'Phone (Android)', 'ACAD B2', '2026-09-28', 'uploads/lost/lost_f0134b0301806ec5.jpg', 'It contains papers of CTC for ROG and other stuff', NULL, NULL, NULL, NULL, NULL, '2026-09-28 18:57:12', 1, 'closed', '2026-09-28 10:44:05');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `notifications`
+--
+
+CREATE TABLE `notifications` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `user_id` int(10) UNSIGNED NOT NULL,
+  `category` enum('match','claim','report','system') NOT NULL,
+  `title` varchar(180) NOT NULL,
+  `body` text NOT NULL,
+  `entity_type` varchar(40) DEFAULT NULL,
+  `entity_id` int(10) UNSIGNED DEFAULT NULL,
+  `read_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `notifications`
+--
+
+INSERT INTO `notifications` (`id`, `user_id`, `category`, `title`, `body`, `entity_type`, `entity_id`, `read_at`, `created_at`) VALUES
+(2, 2, 'claim', 'Your claim is under review', 'Your claim for \"VERIFY-24ae3482-found\" is waiting for security verification.', 'claim', 1, NULL, '2026-09-28 02:38:24'),
+(3, 3, 'report', 'Your lost report has been submitted', 'Your report for \"StudentID\" has been submitted.', 'lost', 2, NULL, '2026-09-28 02:57:31'),
+(4, 2, 'match', 'A possible match was found', 'A found tumbler may match your lost report.', 'lost', 3, NULL, '2026-09-27 02:35:00'),
+(5, 3, 'claim', 'More information is needed', 'Security asked for another detail about the backpack claim.', 'claim', 3, NULL, '2026-09-25 05:45:00'),
+(6, 3, 'report', 'Your lost report has been submitted', 'Your report for \"My Phone\" has been submitted.', 'lost', 15, '2026-09-28 15:45:04', '2026-09-28 07:39:06'),
+(7, 3, 'match', 'A possible match was found', 'Security found a possible match for \"My Phone\".', 'lost', 15, '2026-09-28 15:45:03', '2026-09-28 07:42:15'),
+(8, 3, 'claim', 'Your claim is under review', 'Your claim for \"Samsung Phone with large case\" is waiting for security verification.', 'claim', 6, '2026-09-28 15:45:02', '2026-09-28 07:42:57'),
+(9, 3, 'claim', 'More information is needed', 'Security asked for more information about your claim.', 'claim', 6, '2026-09-28 15:44:59', '2026-09-28 07:43:19'),
+(10, 3, 'claim', 'Your claim was approved', 'Bring your pickup code to the security office.', 'claim', 6, NULL, '2026-09-28 07:44:43'),
+(11, 3, 'claim', 'Your item was returned', 'The security office confirmed your pickup.', 'claim', 6, NULL, '2026-09-28 07:46:52'),
+(12, 3, 'report', 'Your lost report has been submitted', 'Your report for \"Android phone Samsung\" has been submitted.', 'lost', 16, NULL, '2026-09-28 10:30:38'),
+(13, 3, 'report', 'Your lost report has been submitted', 'Your report for \"Envelop\" has been submitted.', 'lost', 17, NULL, '2026-09-28 10:44:05'),
+(14, 3, 'claim', 'Your claim is under review', 'Your claim for \"Envelop with documents\" is waiting for security verification.', 'claim', 7, NULL, '2026-09-28 10:50:43'),
+(15, 3, 'claim', 'More information is needed', 'Security asked for more information about your claim.', 'claim', 7, NULL, '2026-09-28 10:51:20'),
+(16, 3, 'claim', 'Your claim was approved', 'Bring your pickup code to the security office.', 'claim', 7, NULL, '2026-09-28 10:51:32'),
+(17, 3, 'claim', 'Your item was returned', 'The security office confirmed your pickup.', 'claim', 7, NULL, '2026-09-28 10:56:34');
 
 -- --------------------------------------------------------
 
@@ -150,11 +415,40 @@ CREATE TABLE `pickups` (
   `id` int(10) UNSIGNED NOT NULL,
   `claim_id` int(10) UNSIGNED NOT NULL,
   `qr_token` varchar(255) NOT NULL,
+  `expires_at` datetime DEFAULT NULL,
+  `status` enum('pending','verified','expired','invalid') NOT NULL DEFAULT 'pending',
   `scheduled_for` datetime DEFAULT NULL,
   `scanned_at` datetime DEFAULT NULL,
   `verified_by` int(10) UNSIGNED DEFAULT NULL,
+  `return_code` varchar(30) DEFAULT NULL,
+  `return_method` varchar(80) DEFAULT NULL,
+  `condition_note` varchar(255) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `pickups`
+--
+
+INSERT INTO `pickups` (`id`, `claim_id`, `qr_token`, `expires_at`, `status`, `scheduled_for`, `scanned_at`, `verified_by`, `return_code`, `return_method`, `condition_note`, `created_at`) VALUES
+(1, 4, 'seedpickup000000000000000000000101', '2026-09-28 18:00:00', 'pending', '2026-09-28 15:00:00', NULL, NULL, NULL, NULL, NULL, '2026-09-28 01:15:00'),
+(2, 5, 'seedpickup000000000000000000000102', '2026-09-27 18:00:00', 'verified', '2026-09-27 14:00:00', '2026-09-27 14:12:00', 0, 'RT-2026-102', 'Security office counter', NULL, '2026-09-26 01:05:00'),
+(3, 6, '2cbc6f8c8f824f02fe8cc95f5f7870a5', NULL, 'verified', NULL, '2026-09-28 15:46:52', 0, 'RT-2026-003', NULL, NULL, '2026-09-28 07:44:43'),
+(4, 7, '12bf990ddc06aa26e6f05f26ef9adda4', NULL, 'verified', NULL, '2026-09-28 18:56:34', 0, 'RT-2026-004', NULL, NULL, '2026-09-28 10:51:32');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `saved_items`
+--
+
+CREATE TABLE `saved_items` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `user_id` int(10) UNSIGNED NOT NULL,
+  `entity_type` enum('lost','found') NOT NULL,
+  `entity_id` int(10) UNSIGNED NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -230,7 +524,13 @@ INSERT INTO `totp_challenges` (`id`, `user_id`, `code_hash`, `purpose`, `expires
 (37, 2, '$2y$10$RnXe8iwiaYr2749KRT/WqOCePj68JhvlYV.jmihE4uPoWEoX62/rW', 'password_reset', '2026-09-01 20:09:43', '2026-09-01 20:05:05', '2026-09-01 12:04:43'),
 (38, 2, '$2y$10$/thIvrVIUcRozANB57kgAe7vUndfSSbdJd8SncXh1uyO9zjVaMzBK', 'login', '2026-09-01 20:18:49', NULL, '2026-09-01 12:13:49'),
 (39, 2, '$2y$10$c9GFX10Exb4MotqYsw2wkORoo5cpl9H6Brcsy0nlYMTnCkWbY8.s.', 'login', '2026-09-01 20:19:13', NULL, '2026-09-01 12:14:13'),
-(40, 2, '$2y$10$8Gl2BiX2ksM8nCXXCL/V/uzXUpMmyMe3z92cOXu3KND3lQ8XCAPDS', 'login', '2026-09-01 20:36:01', '2026-09-01 20:31:09', '2026-09-01 12:31:01');
+(40, 2, '$2y$10$8Gl2BiX2ksM8nCXXCL/V/uzXUpMmyMe3z92cOXu3KND3lQ8XCAPDS', 'login', '2026-09-01 20:36:01', '2026-09-01 20:31:09', '2026-09-01 12:31:01'),
+(41, 3, '$2y$10$JaHDSYMKLHXNyqda.F89muijt9EaxSGz/Aj2UllE.7KD8UWbiaQ26', 'login', '2026-09-28 11:47:24', NULL, '2026-09-28 03:42:24'),
+(42, 3, '$2y$10$lncmRNTAemT5jA/lATiaFOYI9mxoGDr3JEHmaufWIyDB7VpMKlmJy', 'login', '2026-09-28 11:48:22', '2026-09-28 11:44:07', '2026-09-28 03:43:22'),
+(43, 3, '$2y$10$8KdWIjulbV1QpedF353wdOEslUfp3LWXdT2w8jCJCth3VTJBUGMRy', 'login', '2026-09-28 11:50:09', NULL, '2026-09-28 03:45:09'),
+(44, 3, '$2y$10$/lWDAjwghqfYYqX8ecGk5OWeSQZHK9IAuhB8pfEastqpg.7DKmKEK', 'login', '2026-09-28 11:59:38', NULL, '2026-09-28 03:54:38'),
+(45, 3, '$2y$10$yYzP5Hd5VogStpfOhbaEguTjnrH2OlKcPHByZVlmhl8CVjHj4p8Iq', 'login', '2026-09-28 12:01:10', NULL, '2026-09-28 03:56:10'),
+(46, 3, '$2y$10$McbkHTWVOm6yLwS6jK1C1uJhzpPus/2BpMAbxb3VYi0f0w.CmcFka', 'password_reset', '2026-09-28 12:17:12', '2026-09-28 12:12:52', '2026-09-28 04:12:12');
 
 -- --------------------------------------------------------
 
@@ -242,6 +542,17 @@ CREATE TABLE `users` (
   `id` int(10) UNSIGNED NOT NULL,
   `email` varchar(150) NOT NULL,
   `student_id` varchar(30) DEFAULT NULL,
+  `phone` varchar(30) DEFAULT NULL,
+  `program_department` varchar(150) DEFAULT NULL,
+  `email_verified` tinyint(1) NOT NULL DEFAULT 0,
+  `phone_verified` tinyint(1) NOT NULL DEFAULT 0,
+  `last_login_at` datetime DEFAULT NULL,
+  `notify_email` tinyint(1) NOT NULL DEFAULT 1,
+  `notify_sms` tinyint(1) NOT NULL DEFAULT 0,
+  `notify_in_app` tinyint(1) NOT NULL DEFAULT 1,
+  `notify_matches` tinyint(1) NOT NULL DEFAULT 1,
+  `notify_system` tinyint(1) NOT NULL DEFAULT 1,
+  `share_lost_reports` tinyint(1) NOT NULL DEFAULT 1,
   `full_name` varchar(150) NOT NULL,
   `password_hash` varchar(255) DEFAULT NULL,
   `password_is_set` tinyint(1) NOT NULL DEFAULT 0,
@@ -252,6 +563,7 @@ CREATE TABLE `users` (
   `avatar_url` varchar(500) DEFAULT NULL,
   `totp_secret` varchar(64) DEFAULT NULL,
   `totp_enabled` tinyint(1) NOT NULL DEFAULT 0,
+  `login_method` enum('email','totp') NOT NULL DEFAULT 'email',
   `status` enum('active','blocked') NOT NULL DEFAULT 'active',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
@@ -263,9 +575,11 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `email`, `student_id`, `full_name`, `password_hash`, `password_is_set`, `skip_password_prompt`, `role`, `auth_provider`, `google_id`, `avatar_url`, `totp_secret`, `totp_enabled`, `status`, `created_at`, `updated_at`, `failed_attempts`, `lockout_until`) VALUES
-(1, 'admin@umak.edu.ph', NULL, 'John Matthew S. Palma', '$2y$10$/HSC5vk1SeIlrrk.ZDDalusHSLMYAs5HGtcrvZVXaC1da27m4AMS6', 1, 0, 'admin', 'local', NULL, NULL, NULL, 0, 'active', '2026-09-01 10:42:39', '2026-09-01 10:42:39', 0, NULL),
-(2, 'jangeles.a12345431@umak.edu.ph', 'A12345431', 'JUSTIN ANGELES', '$2y$10$vXoDV30IrWOFz3G2q5k9pO3QbEre2wA5SL3pIRYjjg8GtY89BACpG', 1, 0, 'student', 'local', '113623321447473046632', 'https://lh3.googleusercontent.com/a/ACg8ocJUBdUOLKMk1w_XtsK8RKQ-0aJNkuvfdbPsMLP2o6yF3pZ01XI=s96-c', 'G6V2D6DEZILCZEWR', 0, 'active', '2026-09-01 10:50:13', '2026-09-01 12:31:01', 0, NULL);
+INSERT INTO `users` (`id`, `email`, `student_id`, `phone`, `program_department`, `email_verified`, `phone_verified`, `last_login_at`, `notify_email`, `notify_sms`, `notify_in_app`, `notify_matches`, `notify_system`, `share_lost_reports`, `full_name`, `password_hash`, `password_is_set`, `skip_password_prompt`, `role`, `auth_provider`, `google_id`, `avatar_url`, `totp_secret`, `totp_enabled`, `login_method`, `status`, `created_at`, `updated_at`, `failed_attempts`, `lockout_until`) VALUES
+(0, 'administrator@umak.edu.ph', 'k00000001', NULL, NULL, 1, 0, '2026-09-28 18:45:43', 1, 0, 1, 1, 1, 1, 'Administrator', '$2y$10$eWAZ/brLNO93toytNEhUoeFZX9s2Pl.VJGplbIqLLgWLVsuYWTAD2', 1, 0, 'admin', 'local', NULL, NULL, 'HK2R2HZNX2RG3ZD4', 1, 'totp', 'active', '2026-09-28 03:41:18', '2026-09-28 10:45:43', 0, NULL),
+(1, 'admin@umak.edu.ph', NULL, NULL, NULL, 1, 0, NULL, 1, 0, 1, 1, 1, 1, 'John Matthew S. Palma', '$2y$10$/HSC5vk1SeIlrrk.ZDDalusHSLMYAs5HGtcrvZVXaC1da27m4AMS6', 1, 0, 'admin', 'local', NULL, NULL, NULL, 0, 'email', 'active', '2026-09-01 10:42:39', '2026-09-28 00:29:22', 0, NULL),
+(2, 'jangeles.a12345431@umak.edu.ph', 'A12345431', NULL, NULL, 1, 0, NULL, 1, 0, 1, 1, 1, 1, 'JUSTIN ANGELES', '$2y$10$vXoDV30IrWOFz3G2q5k9pO3QbEre2wA5SL3pIRYjjg8GtY89BACpG', 1, 0, 'student', 'local', '113623321447473046632', 'https://lh3.googleusercontent.com/a/ACg8ocJUBdUOLKMk1w_XtsK8RKQ-0aJNkuvfdbPsMLP2o6yF3pZ01XI=s96-c', 'G6V2D6DEZILCZEWR', 0, 'email', 'active', '2026-09-01 10:50:13', '2026-09-28 02:38:25', 0, NULL),
+(3, 'rpapa.k12150334@umak.edu.ph', 'K12150334', NULL, NULL, 1, 0, '2026-09-28 18:36:19', 1, 0, 1, 1, 1, 1, 'RICHMHON PAPA', '$2y$10$tVH52..5ZpfXsHR8Cp/6sevORJB2Hn9ZtN4EnZSCgGp/9dFdcWWbq', 1, 0, 'student', 'local', '116457197935379876137', 'https://lh3.googleusercontent.com/a/ACg8ocK1uq0sc53IbDwZpGkYhKSNYmjW4tdbJZCeiVHKfSnhM_OaO8-d=s96-c', 'VTF34SLHNPVC7SJA', 1, 'totp', 'active', '2026-09-01 13:22:57', '2026-09-28 10:36:19', 0, NULL);
 
 --
 -- Indexes for dumped tables
@@ -283,23 +597,53 @@ ALTER TABLE `audit_trail`
 --
 ALTER TABLE `claims`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_claim_public_code` (`public_code`),
   ADD KEY `found_item_id` (`found_item_id`),
   ADD KEY `claimant_id` (`claimant_id`),
-  ADD KEY `reviewed_by` (`reviewed_by`);
+  ADD KEY `reviewed_by` (`reviewed_by`),
+  ADD KEY `idx_claims_claimant` (`claimant_id`,`status`),
+  ADD KEY `fk_claims_lost_item` (`lost_item_id`);
 
 --
 -- Indexes for table `found_items`
 --
 ALTER TABLE `found_items`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_found_public_code` (`public_code`),
   ADD KEY `logged_by` (`logged_by`);
+
+--
+-- Indexes for table `item_images`
+--
+ALTER TABLE `item_images`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_item_images` (`entity_type`,`entity_id`);
+
+--
+-- Indexes for table `item_matches`
+--
+ALTER TABLE `item_matches`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_item_match` (`lost_item_id`,`found_item_id`),
+  ADD KEY `fk_match_found` (`found_item_id`),
+  ADD KEY `fk_match_reviewer` (`reviewed_by`);
 
 --
 -- Indexes for table `lost_items`
 --
 ALTER TABLE `lost_items`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `reported_by` (`reported_by`);
+  ADD UNIQUE KEY `uniq_lost_public_code` (`public_code`),
+  ADD KEY `reported_by` (`reported_by`),
+  ADD KEY `idx_lost_reported` (`reported_by`,`status`),
+  ADD KEY `fk_lost_matched_found` (`matched_found_item_id`);
+
+--
+-- Indexes for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_notifications_user` (`user_id`,`read_at`,`created_at`);
 
 --
 -- Indexes for table `pickups`
@@ -309,6 +653,13 @@ ALTER TABLE `pickups`
   ADD UNIQUE KEY `claim_id` (`claim_id`),
   ADD UNIQUE KEY `qr_token` (`qr_token`),
   ADD KEY `verified_by` (`verified_by`);
+
+--
+-- Indexes for table `saved_items`
+--
+ALTER TABLE `saved_items`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_saved_item` (`user_id`,`entity_type`,`entity_id`);
 
 --
 -- Indexes for table `sms_logs`
@@ -341,31 +692,55 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `audit_trail`
 --
 ALTER TABLE `audit_trail`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=140;
 
 --
 -- AUTO_INCREMENT for table `claims`
 --
 ALTER TABLE `claims`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `found_items`
 --
 ALTER TABLE `found_items`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+
+--
+-- AUTO_INCREMENT for table `item_images`
+--
+ALTER TABLE `item_images`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+
+--
+-- AUTO_INCREMENT for table `item_matches`
+--
+ALTER TABLE `item_matches`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `lost_items`
 --
 ALTER TABLE `lost_items`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+
+--
+-- AUTO_INCREMENT for table `notifications`
+--
+ALTER TABLE `notifications`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `pickups`
 --
 ALTER TABLE `pickups`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `saved_items`
+--
+ALTER TABLE `saved_items`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `sms_logs`
@@ -377,13 +752,13 @@ ALTER TABLE `sms_logs`
 -- AUTO_INCREMENT for table `totp_challenges`
 --
 ALTER TABLE `totp_challenges`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- Constraints for dumped tables
@@ -401,7 +776,8 @@ ALTER TABLE `audit_trail`
 ALTER TABLE `claims`
   ADD CONSTRAINT `claims_ibfk_1` FOREIGN KEY (`found_item_id`) REFERENCES `found_items` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `claims_ibfk_2` FOREIGN KEY (`claimant_id`) REFERENCES `users` (`id`),
-  ADD CONSTRAINT `claims_ibfk_3` FOREIGN KEY (`reviewed_by`) REFERENCES `users` (`id`);
+  ADD CONSTRAINT `claims_ibfk_3` FOREIGN KEY (`reviewed_by`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `fk_claims_lost_item` FOREIGN KEY (`lost_item_id`) REFERENCES `lost_items` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `found_items`
@@ -410,10 +786,25 @@ ALTER TABLE `found_items`
   ADD CONSTRAINT `found_items_ibfk_1` FOREIGN KEY (`logged_by`) REFERENCES `users` (`id`);
 
 --
+-- Constraints for table `item_matches`
+--
+ALTER TABLE `item_matches`
+  ADD CONSTRAINT `fk_match_found` FOREIGN KEY (`found_item_id`) REFERENCES `found_items` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_match_lost` FOREIGN KEY (`lost_item_id`) REFERENCES `lost_items` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_match_reviewer` FOREIGN KEY (`reviewed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
 -- Constraints for table `lost_items`
 --
 ALTER TABLE `lost_items`
+  ADD CONSTRAINT `fk_lost_matched_found` FOREIGN KEY (`matched_found_item_id`) REFERENCES `found_items` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `lost_items_ibfk_1` FOREIGN KEY (`reported_by`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD CONSTRAINT `fk_notifications_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `pickups`
@@ -421,6 +812,12 @@ ALTER TABLE `lost_items`
 ALTER TABLE `pickups`
   ADD CONSTRAINT `pickups_ibfk_1` FOREIGN KEY (`claim_id`) REFERENCES `claims` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `pickups_ibfk_2` FOREIGN KEY (`verified_by`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `saved_items`
+--
+ALTER TABLE `saved_items`
+  ADD CONSTRAINT `fk_saved_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `sms_logs`

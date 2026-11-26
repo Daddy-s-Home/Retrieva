@@ -5,7 +5,7 @@ require_once __DIR__ . '/../database/recaptcha_config.php';
 
 start_session();
 
-if (has_session_id('user_id')) {
+if (session_id_present('user_id')) {
     header('Location: ../dashboard/index.php');
     exit;
 }

@@ -54,8 +54,9 @@ function notify_channel(string $channel, string $event, array $data): void {
 $session = require_login_page('../auth/login.php');
 
 $stmt = get_db()->prepare(
-    'SELECT id, email, student_id, full_name, role, avatar_url, auth_provider,
-            password_is_set, skip_password_prompt, totp_enabled
+    'SELECT id, email, student_id, phone, program_department, email_verified, phone_verified,
+            notify_email, notify_sms, notify_in_app, notify_matches, notify_system, share_lost_reports,
+            full_name, role, avatar_url, auth_provider, password_is_set, skip_password_prompt, totp_enabled, login_method
      FROM users WHERE id = ?'
 );
 $stmt->execute([$session['user_id']]);

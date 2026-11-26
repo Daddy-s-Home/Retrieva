@@ -477,6 +477,17 @@
   background: var(--c-danger-bg, #fef2f2);
 }
 
+.totp-resend {
+  text-align: left;
+  margin: 0 0 6px;
+}
+.totp-resend .text-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
 .totp-sync-note {
   text-align: center;
   font-size: 12.5px;
