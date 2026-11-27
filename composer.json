@@ -1,0 +1,12 @@
+{
+    "name": "umak/retrieva",
+    "description": "Retrieva — Fraud-Proof Campus Lost & Found System (auth + dashboard shell)",
+    "type": "project",
+    "require": {
+        "php": ">=8.0",
+        "league/oauth2-google": "^5.0",
+        "phpmailer/phpmailer": "^7.1",
+        "pusher/pusher-php-server": "^7.3",
+        "dompdf/dompdf": "^3.1"
+    }
+}
