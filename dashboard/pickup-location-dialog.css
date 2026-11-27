@@ -1,0 +1,36 @@
+.pickup-location-dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-width: none;
+  padding: 0;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+  color: var(--c-text);
+  background: #fff;
+  box-shadow: var(--shadow-pop);
+}
+.pickup-location-dialog::backdrop { background: rgba(8, 24, 48, 0.62); }
+.pickup-location-dialog form { display: grid; gap: 14px; padding: 24px; }
+.pickup-location-dialog__header h2 { margin: 0 0 8px; color: var(--c-navy-dark); }
+.pickup-location-dialog__header p { margin: 0; color: var(--c-text-muted); line-height: 1.5; }
+.pickup-location-dialog__label { display: flex; justify-content: space-between; gap: 12px; font-weight: 700; }
+.pickup-location-dialog__label span { color: var(--c-danger); font-size: 0.85em; }
+.pickup-location-dialog__input {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  color: var(--c-text);
+  font: inherit;
+}
+.pickup-location-dialog__input:focus-visible { outline: 3px solid var(--c-info); outline-offset: 2px; }
+.pickup-location-dialog__actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+.pickup-location-dialog__actions .btn { min-height: 44px; }
+@media (max-width: 480px) {
+  .pickup-location-dialog form { padding: 20px; }
+  .pickup-location-dialog__actions { flex-direction: column-reverse; }
+  .pickup-location-dialog__actions .btn { width: 100%; justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pickup-location-dialog { scroll-behavior: auto; }
+}

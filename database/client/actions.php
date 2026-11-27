@@ -120,7 +120,7 @@ function client_report_input(array $input): array {
     $description = trim((string) ($input['description'] ?? ''));
     $date = DateTime::createFromFormat('Y-m-d', $dateLost);
     $validDate = $date instanceof DateTime && $date->format('Y-m-d') === $dateLost && $dateLost <= date('Y-m-d');
-    if ($name === '' || strlen($name) > 150 || strlen($location) > 150 || strlen($description) > 1000 || !in_array($category, CLIENT_CATEGORIES, true) || !$validDate) {
+    if ($name === '' || strlen($name) > 150 || strlen($location) > 150 || strlen($description) > 1000 || !in_array($category, ITEM_CATEGORY_OPTIONS, true) || !$validDate) {
         throw new InvalidArgumentException('Enter a valid item, category, date, and description.');
     }
     return [$name, $category, $location !== '' ? $location : null, $dateLost, $description !== '' ? $description : null];

@@ -114,60 +114,15 @@
   }
 
   function stopCameras() {
+    if (window.RetrievaPhotoPicker) {
+      window.RetrievaPhotoPicker.stopAllCameras();
+      return;
+    }
     document.querySelectorAll('[data-photo-video]').forEach((video) => {
       const stream = video.srcObject;
       if (stream && stream.getTracks) stream.getTracks().forEach((track) => track.stop());
       video.srcObject = null;
     });
-  }
-
-  function photoFiles(picker) {
-    if (!picker._files) picker._files = [];
-    return picker._files;
-  }
-
-  function keptPhotos(picker) {
-    return Array.from(picker.querySelectorAll('[data-existing-photo]')).filter((box) => !box.checked).length;
-  }
-
-  function renderPhotoPreview(picker) {
-    const preview = picker.querySelector('[data-photo-preview]');
-    if (!preview) return;
-    preview.innerHTML = '';
-    photoFiles(picker).forEach((file, index) => {
-      const figure = document.createElement('figure');
-      const img = document.createElement('img');
-      img.src = URL.createObjectURL(file);
-      img.alt = 'New photo';
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'btn btn-ghost';
-      button.textContent = 'Remove';
-      button.dataset.photoRemove = String(index);
-      figure.append(img, button);
-      preview.append(figure);
-    });
-  }
-
-  function syncPhotoInput(picker) {
-    const input = picker.querySelector('[data-photo-files]');
-    if (!input || typeof DataTransfer === 'undefined') return;
-    const transfer = new DataTransfer();
-    photoFiles(picker).forEach((file) => transfer.items.add(file));
-    input.files = transfer.files;
-  }
-
-  function addPhotoFiles(picker, files) {
-    const room = 5 - keptPhotos(picker) - photoFiles(picker).length;
-    if (room <= 0) {
-      showToast('You can add up to 5 photos.', 'error');
-      return;
-    }
-    const accepted = Array.from(files).slice(0, room);
-    if (accepted.length < files.length) showToast('You can add up to 5 photos.', 'error');
-    accepted.forEach((file) => photoFiles(picker).push(file));
-    renderPhotoPreview(picker);
-    syncPhotoInput(picker);
   }
 
   function dropModuleCache(name) {
@@ -215,56 +170,6 @@
   }
 
   document.addEventListener('click', async (event) => {
-    const cameraButton = event.target.closest('[data-photo-camera]');
-    if (cameraButton) {
-      const picker = cameraButton.closest('[data-photo-picker]');
-      const stage = picker.querySelector('[data-photo-stage]');
-      const video = picker.querySelector('[data-photo-video]');
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        showToast('The camera is not available. Choose a photo file instead.', 'error');
-        return;
-      }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        video.srcObject = stream;
-        stage.hidden = false;
-      } catch (error) {
-        showToast('The camera is blocked. Choose a photo file instead.', 'error');
-      }
-      return;
-    }
-    const snapButton = event.target.closest('[data-photo-snap]');
-    if (snapButton) {
-      const picker = snapButton.closest('[data-photo-picker]');
-      const video = picker.querySelector('[data-photo-video]');
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
-      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        addPhotoFiles(picker, [new File([blob], 'camera-' + Date.now() + '.jpg', { type: 'image/jpeg' })]);
-      }, 'image/jpeg', 0.85);
-      return;
-    }
-    const stopButton = event.target.closest('[data-photo-stop]');
-    if (stopButton) {
-      const picker = stopButton.closest('[data-photo-picker]');
-      const video = picker.querySelector('[data-photo-video]');
-      const stream = video.srcObject;
-      if (stream && stream.getTracks) stream.getTracks().forEach((track) => track.stop());
-      video.srcObject = null;
-      picker.querySelector('[data-photo-stage]').hidden = true;
-      return;
-    }
-    const removeButton = event.target.closest('[data-photo-remove]');
-    if (removeButton) {
-      const picker = removeButton.closest('[data-photo-picker]');
-      photoFiles(picker).splice(Number(removeButton.dataset.photoRemove), 1);
-      renderPhotoPreview(picker);
-      syncPhotoInput(picker);
-      return;
-    }
     const closer = event.target.closest('[data-close-drawer]');
     if (closer && drawer) {
       drawer.hidden = true;
@@ -297,29 +202,6 @@
     paint(info.name, info.search, true);
   });
 
-  document.addEventListener('change', (event) => {
-    const input = event.target.closest('[data-photo-files]');
-    if (!input) return;
-    const picker = input.closest('[data-photo-picker]');
-    const chosen = Array.from(input.files || []);
-    input.value = '';
-    addPhotoFiles(picker, chosen);
-  });
-
-  document.addEventListener('submit', (event) => {
-    const form = event.target;
-    if (!(form instanceof HTMLFormElement)) return;
-    const picker = form.querySelector('[data-photo-picker]');
-    if (!picker) return;
-    syncPhotoInput(picker);
-    const total = keptPhotos(picker) + photoFiles(picker).length;
-    if (total < 1 || total > 5) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      showToast(total < 1 ? 'Add at least one photo.' : 'You can add up to 5 photos.', 'error');
-    }
-  }, true);
-
   document.addEventListener('submit', async (event) => {
     const filterForm = event.target.closest('form[data-client-filter]');
     if (filterForm) {
@@ -345,6 +227,10 @@
         headers: { Accept: 'application/json', 'X-Requested-With': 'fetch' },
       });
       const payload = await readJson(response);
+      if (payload.success && form.dataset.closeOnSuccess === 'true') {
+        const dialog = form.closest('dialog');
+        if (dialog && dialog.open) dialog.close();
+      }
       if (payload.success && payload.redirect) {
         const info = moduleFromUrl(payload.redirect);
         if (info && warm.modules[info.name]) {

@@ -369,16 +369,8 @@ async function refreshDashboardLive() {
       window.retrievaLineChart.update();
     }
 
-    if (window.retrievaCategoryChart && data.categoryCounts) {
-      window.retrievaCategoryChart.data.labels = Object.keys(data.categoryCounts);
-      window.retrievaCategoryChart.data.datasets[0].data = Object.values(data.categoryCounts);
-      window.retrievaCategoryChart.update();
-      document.querySelectorAll('[data-category-count]').forEach((el) => {
-        const cat = el.dataset.categoryCount;
-        if (cat && Object.prototype.hasOwnProperty.call(data.categoryCounts, cat)) {
-          el.textContent = String(data.categoryCounts[cat]);
-        }
-      });
+    if (data.categoryData && typeof window.retrievaUpdateCategoryData === 'function') {
+      window.retrievaUpdateCategoryData(data.categoryData);
     }
   } catch {
     // Non-blocking live sync
@@ -448,9 +440,39 @@ function initLogout() {
 }
 
 function initSidebarToggle() {
-  document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
-    document.querySelector('.sidebar')?.classList.toggle('sidebar--open');
+  const toggle = document.getElementById('sidebar-toggle');
+  const sidebar = document.querySelector('.sidebar');
+  if (!toggle || !sidebar) return;
+  const closeButton = document.getElementById('sidebar-close');
+
+  const closedIcon = toggle.textContent.trim() || '☰';
+  const setOpen = (open, restoreFocus = false) => {
+    sidebar.classList.toggle('sidebar--open', open);
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.setAttribute('aria-label', open ? 'Close navigation menu' : 'Open navigation menu');
+    toggle.textContent = open ? '×' : closedIcon;
+    if (restoreFocus) toggle.focus();
+  };
+
+  toggle.addEventListener('click', () => {
+    setOpen(!sidebar.classList.contains('sidebar--open'));
   });
+  closeButton?.addEventListener('click', () => setOpen(false, true));
+  sidebar.addEventListener('click', (event) => {
+    if (event.target.closest('.nav-item')) setOpen(false);
+  });
+  document.addEventListener('click', (event) => {
+    if (!sidebar.classList.contains('sidebar--open')) return;
+    if (sidebar.contains(event.target) || toggle.contains(event.target)) return;
+    setOpen(false);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && sidebar.classList.contains('sidebar--open')) {
+      setOpen(false, true);
+    }
+  });
+
+  setOpen(sidebar.classList.contains('sidebar--open'));
 }
 
 function initGlobalSearch() {

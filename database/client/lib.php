@@ -2,9 +2,27 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../category_helper.php';
 require_once __DIR__ . '/../../dashboard/rbac.php';
 
-const CLIENT_CATEGORIES = ['Phone (Android)', 'Phone (Iphone)', 'Tablet', 'ID', 'Lace', 'Tumbler/Flask/Bottled Water', 'Bag', 'Shoes', 'Notebook', 'Book', 'Other'];
+const CLIENT_CATEGORIES = [
+    'Phone (Android)',
+    'Phone (Iphone)',
+    'Tablet',
+    'ID',
+    'Lace',
+    'Tumbler/Flask/Bottled Water',
+    'Bag',
+    'Shoes',
+    'Notebook',
+    'Book',
+    'Other',
+    'Phones (Android)',
+    'Phones (Iphone)',
+    'ID lace',
+    'Food containers and utensils',
+    'Others',
+];
 const CLIENT_LOST_STATUSES = ['searching', 'matched', 'resolved', 'closed'];
 const CLIENT_PAGES = [
     'dashboard' => 'client-dashboard.php',
@@ -47,19 +65,61 @@ function client_month_window(): array {
     return [$startPrev, $startThis, $startNext];
 }
 
+function retrieva_json_photo_paths(?string $value): ?array {
+    if ($value === null || $value === '') {
+        return null;
+    }
+
+    $paths = json_decode($value, true);
+    if (json_last_error() !== JSON_ERROR_NONE || !is_array($paths) || !array_is_list($paths)) {
+        return null;
+    }
+
+    return $paths;
+}
+
+function retrieva_safe_photo_path(string $path): bool {
+    $path = str_replace('\\', '/', trim($path));
+    if (
+        $path === ''
+        || str_contains($path, "\0")
+        || str_contains($path, '..')
+        || preg_match('#^[a-z][a-z0-9+.-]*:#i', $path)
+        || !preg_match('#^uploads/(?:lost|found)/[^/]+$#', $path)
+    ) {
+        return false;
+    }
+
+    return in_array(strtolower(pathinfo($path, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp'], true);
+}
+
+function retrieva_normalize_photo_paths(array $paths): array {
+    $normalized = [];
+    foreach ($paths as $path) {
+        if (!is_string($path)) {
+            continue;
+        }
+        $path = str_replace('\\', '/', trim($path));
+        if (retrieva_safe_photo_path($path) && !in_array($path, $normalized, true)) {
+            $normalized[] = $path;
+        }
+    }
+
+    return $normalized;
+}
+
+function retrieva_photo_paths(?string $value): array {
+    if ($value === null || trim($value) === '') {
+        return [];
+    }
+
+    $paths = retrieva_json_photo_paths($value);
+    return retrieva_normalize_photo_paths($paths ?? [$value]);
+}
+
 function client_photo_src(?string $path): string {
-    if ($path === null || $path === '') {
-        return '';
-    }
-    $path = str_replace('\\', '/', $path);
-    if (str_contains($path, '..') || preg_match('#^[a-z][a-z0-9+.-]*:#i', $path)) {
-        return '';
-    }
-    $path = ltrim($path, '/');
-    if (!str_starts_with($path, 'uploads/')) {
-        return '';
-    }
-    return '../' . $path;
+    $paths = retrieva_photo_paths($path);
+    return $paths === [] ? '' : '../' . $paths[0];
 }
 
 function retrieva_file_list(string $field): array {
@@ -87,27 +147,42 @@ function retrieva_file_list(string $field): array {
     return $list;
 }
 
-function retrieva_store_photo(array $file, string $folder): string {
-    if (!in_array($folder, ['lost', 'found'], true)) {
-        throw new InvalidArgumentException('The photo could not be saved.');
-    }
+function retrieva_photo_upload_extension(array $file): string {
     $error = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
     if ($error !== UPLOAD_ERR_OK) {
         throw new InvalidArgumentException('The photo could not be uploaded.');
     }
-    if ((int) ($file['size'] ?? 0) > 2000000) {
+    $tmpName = (string) ($file['tmp_name'] ?? '');
+    if ($tmpName === '' || !is_uploaded_file($tmpName)) {
+        throw new InvalidArgumentException('The selected file is not a valid photo upload.');
+    }
+    $size = filesize($tmpName);
+    if ($size === false || $size < 1 || $size > 2000000) {
         throw new InvalidArgumentException('Photos must be 2 MB or smaller.');
     }
-    $mime = (new finfo(FILEINFO_MIME_TYPE))->file((string) $file['tmp_name']);
-    $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$mime] ?? null;
-    if ($ext === null) {
-        throw new InvalidArgumentException('Use a JPG, PNG, or WebP photo.');
+
+    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($tmpName);
+    $extension = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$mime] ?? null;
+    $image = @getimagesize($tmpName);
+    if ($extension === null || $image === false || ($image['mime'] ?? '') !== $mime) {
+        throw new InvalidArgumentException('Use a valid JPG, PNG, or WebP photo.');
+    }
+
+    return $extension;
+}
+
+function retrieva_store_photo(array $file, string $folder, string $extension): string {
+    if (!in_array($folder, ['lost', 'found'], true)) {
+        throw new InvalidArgumentException('The photo could not be saved.');
+    }
+    if (!in_array($extension, ['jpg', 'png', 'webp'], true)) {
+        throw new InvalidArgumentException('The photo could not be saved.');
     }
     $dir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . $folder;
     if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
         throw new RuntimeException('Photo storage is unavailable.');
     }
-    $name = $folder . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+    $name = $folder . '_' . bin2hex(random_bytes(8)) . '.' . $extension;
     if (!move_uploaded_file((string) $file['tmp_name'], $dir . DIRECTORY_SEPARATOR . $name)) {
         throw new RuntimeException('The photo could not be saved.');
     }
@@ -116,29 +191,44 @@ function retrieva_store_photo(array $file, string $folder): string {
 
 function retrieva_photo_map(string $type, array $covers): array {
     $map = [];
+    $legacy = [];
     foreach ($covers as $id => $cover) {
-        $map[(int) $id] = [];
+        $id = (int) $id;
+        $map[$id] = [];
+        $value = is_string($cover) ? $cover : null;
+        $jsonPaths = retrieva_json_photo_paths($value);
+        if ($jsonPaths !== null) {
+            foreach (retrieva_normalize_photo_paths($jsonPaths) as $path) {
+                $map[$id][] = ['id' => count($map[$id]), 'src' => client_photo_src($path)];
+            }
+        } else {
+            $legacy[$id] = retrieva_photo_paths($value);
+        }
     }
-    if ($map === [] || !in_array($type, ['lost', 'found'], true)) {
+    if ($map === [] || $legacy === [] || !in_array($type, ['lost', 'found'], true)) {
         return $map;
     }
-    $ids = array_keys($map);
+    $ids = array_keys($legacy);
     $placeholders = implode(',', array_fill(0, count($ids), '?'));
     $stmt = get_db()->prepare(
         "SELECT id, entity_id, photo_path FROM item_images WHERE entity_type = ? AND entity_id IN ($placeholders) ORDER BY sort_order ASC, id ASC"
     );
     $stmt->execute(array_merge([$type], $ids));
+    foreach ($legacy as $id => $paths) {
+        foreach ($paths as $path) {
+            $map[$id][] = ['id' => count($map[$id]), 'src' => client_photo_src($path)];
+        }
+    }
     foreach ($stmt->fetchAll() as $row) {
-        $src = client_photo_src($row['photo_path'] ?? null);
-        if ($src === '') {
+        $id = (int) $row['entity_id'];
+        $paths = retrieva_normalize_photo_paths([(string) ($row['photo_path'] ?? '')]);
+        if (!isset($map[$id]) || $paths === []) {
             continue;
         }
-        $map[(int) $row['entity_id']][] = ['id' => (int) $row['id'], 'src' => $src];
-    }
-    foreach ($covers as $id => $cover) {
-        $id = (int) $id;
-        if ($map[$id] === [] && is_string($cover) && $cover !== '') {
-            $map[$id][] = ['id' => 0, 'src' => $cover];
+        foreach ($paths as $path) {
+            if (array_filter($map[$id], static fn (array $photo): bool => $photo['src'] === client_photo_src($path)) === []) {
+                $map[$id][] = ['id' => count($map[$id]), 'src' => client_photo_src($path)];
+            }
         }
     }
     return $map;
@@ -153,75 +243,116 @@ function retrieva_save_photos(string $type, int $id, array $input): void {
     $db = get_db();
     $coverStmt = $db->prepare("SELECT photo_path FROM {$table} WHERE id = ?");
     $coverStmt->execute([$id]);
-    $cover = (string) ($coverStmt->fetchColumn() ?: '');
+    $coverValue = $coverStmt->fetchColumn();
+    if ($coverValue === false) {
+        throw new RuntimeException('The item was not found.');
+    }
+    $cover = $coverValue === null ? null : (string) $coverValue;
     $rows = $db->prepare('SELECT id, photo_path FROM item_images WHERE entity_type = ? AND entity_id = ? ORDER BY sort_order ASC, id ASC');
     $rows->execute([$type, $id]);
-    $existing = $rows->fetchAll();
+    $existingRows = $rows->fetchAll(PDO::FETCH_ASSOC);
+    $jsonPaths = retrieva_json_photo_paths($cover);
+    $existingPaths = $jsonPaths !== null
+        ? retrieva_normalize_photo_paths($jsonPaths)
+        : retrieva_normalize_photo_paths(array_merge([$cover], array_column($existingRows, 'photo_path')));
     $remove = [];
-    foreach ((array) ($input['remove_photos'] ?? []) as $photoId) {
-        $photoId = filter_var($photoId, FILTER_VALIDATE_INT);
-        if ($photoId) {
-            $remove[(int) $photoId] = true;
+    foreach ((array) ($input['remove_photos'] ?? []) as $photoIndex) {
+        $photoIndex = filter_var($photoIndex, FILTER_VALIDATE_INT);
+        if ($photoIndex !== false && $photoIndex !== null && $photoIndex >= 0) {
+            $remove[(int) $photoIndex] = true;
         }
     }
-    $dropLegacy = !empty($input['remove_legacy']);
+    if (!empty($input['remove_legacy'])) {
+        $remove[0] = true;
+    }
     $uploads = retrieva_file_list('photos');
-    $kept = 0;
-    foreach ($existing as $row) {
-        if (!isset($remove[(int) $row['id']])) {
-            $kept++;
+    $keptPaths = [];
+    $removedPaths = [];
+    foreach ($existingPaths as $index => $path) {
+        if (isset($remove[$index])) {
+            $removedPaths[] = $path;
+        } else {
+            $keptPaths[] = $path;
         }
     }
-    if ($existing === [] && $cover !== '' && !$dropLegacy) {
-        $kept = 1;
-    }
-    $total = $kept + count($uploads);
+    $total = count($keptPaths) + count($uploads);
     if ($total < 1 || $total > 5) {
         throw new InvalidArgumentException('Add between 1 and 5 photos.');
     }
-    if ($existing === [] && $cover !== '' && !$dropLegacy) {
-        $insert = $db->prepare('INSERT INTO item_images (entity_type, entity_id, photo_path, sort_order) VALUES (?, ?, ?, 0)');
-        $insert->execute([$type, $id, $cover]);
-    }
-    if ($remove !== []) {
-        $ids = array_keys($remove);
-        $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $select = $db->prepare("SELECT id, photo_path FROM item_images WHERE entity_type = ? AND entity_id = ? AND id IN ($placeholders)");
-        $select->execute(array_merge([$type, $id], $ids));
-        $stored = [];
-        foreach ($select->fetchAll() as $row) {
-            $stored[] = (int) $row['id'];
-            retrieva_unlink_owned($row['photo_path'] ?? '');
+    $extensions = array_map('retrieva_photo_upload_extension', $uploads);
+    $paths = $keptPaths;
+    $created = [];
+    $ownsTransaction = false;
+    try {
+        foreach ($uploads as $index => $file) {
+            $path = retrieva_store_photo($file, $folder, $extensions[$index]);
+            $created[] = $path;
+            $paths[] = $path;
         }
-        if ($stored !== []) {
-            $placeholders = implode(',', array_fill(0, count($stored), '?'));
-            $delete = $db->prepare("DELETE FROM item_images WHERE entity_type = ? AND entity_id = ? AND id IN ($placeholders)");
-            $delete->execute(array_merge([$type, $id], $stored));
+        $encoded = json_encode($paths, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        if (strlen($encoded) > 500) {
+            throw new InvalidArgumentException('The selected photo paths exceed the available storage limit.');
+        }
+
+        if (!$db->inTransaction()) {
+            $db->beginTransaction();
+            $ownsTransaction = true;
+        }
+
+        foreach ($paths as $sort => $path) {
+            if (isset($existingRows[$sort])) {
+                $updateImage = $db->prepare(
+                    'UPDATE item_images SET photo_path = ?, sort_order = ? WHERE id = ? AND entity_type = ? AND entity_id = ?'
+                );
+                $updateImage->execute([$path, $sort, $existingRows[$sort]['id'], $type, $id]);
+            } else {
+                $insertImage = $db->prepare(
+                    'INSERT INTO item_images (entity_type, entity_id, photo_path, sort_order) VALUES (?, ?, ?, ?)'
+                );
+                $insertImage->execute([$type, $id, $path, $sort]);
+            }
+        }
+        if (count($existingRows) > count($paths)) {
+            $removeIds = array_map(
+                static fn (array $row): int => (int) $row['id'],
+                array_slice($existingRows, count($paths))
+            );
+            $placeholders = implode(',', array_fill(0, count($removeIds), '?'));
+            $deleteImages = $db->prepare(
+                "DELETE FROM item_images WHERE entity_type = ? AND entity_id = ? AND id IN ({$placeholders})"
+            );
+            $deleteImages->execute(array_merge([$type, $id], $removeIds));
+        }
+        $updateCover = $db->prepare("UPDATE {$table} SET photo_path = ? WHERE id = ?");
+        $updateCover->execute([$encoded, $id]);
+        if ($ownsTransaction) {
+            $db->commit();
+        }
+    } catch (Throwable $error) {
+        if ($ownsTransaction && $db->inTransaction()) {
+            $db->rollBack();
+        }
+        foreach ($created as $path) {
+            retrieva_unlink_owned($path);
+        }
+        throw $error;
+    }
+
+    foreach ($removedPaths as $path) {
+        if (!in_array($path, $paths, true)) {
+            retrieva_unlink_owned($path);
         }
     }
-    $sortStmt = $db->prepare('SELECT COALESCE(MAX(sort_order), -1) + 1 FROM item_images WHERE entity_type = ? AND entity_id = ?');
-    $sortStmt->execute([$type, $id]);
-    $sort = (int) $sortStmt->fetchColumn();
-    $insert = $db->prepare('INSERT INTO item_images (entity_type, entity_id, photo_path, sort_order) VALUES (?, ?, ?, ?)');
-    foreach ($uploads as $file) {
-        $path = retrieva_store_photo($file, $folder);
-        $insert->execute([$type, $id, $path, $sort]);
-        $sort++;
-    }
-    $first = $db->prepare('SELECT photo_path FROM item_images WHERE entity_type = ? AND entity_id = ? ORDER BY sort_order ASC, id ASC LIMIT 1');
-    $first->execute([$type, $id]);
-    $coverPath = $first->fetchColumn();
-    $update = $db->prepare("UPDATE {$table} SET photo_path = ? WHERE id = ?");
-    $update->execute([$coverPath ?: null, $id]);
 }
 
 function retrieva_unlink_owned(?string $path): void {
     $path = str_replace('\\', '/', (string) $path);
-    $name = basename($path);
-    if (!preg_match('/^(lost|found)_[a-f0-9]{16}\.(jpg|png|webp)$/', $name)) {
+    if (!preg_match('#^uploads/(lost|found)/\1_[a-f0-9]{16}\.(jpg|png|webp)$#', $path, $match)) {
         return;
     }
-    $full = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . substr($name, 0, strpos($name, '_')) . DIRECTORY_SEPARATOR . $name;
+    $folder = $match[1];
+    $name = basename($path);
+    $full = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . $folder . DIRECTORY_SEPARATOR . $name;
     if (is_file($full)) {
         unlink($full);
     }
@@ -231,12 +362,21 @@ function retrieva_delete_photos(string $type, int $id): void {
     if (!in_array($type, ['lost', 'found'], true) || $id < 1) {
         return;
     }
-    $stmt = get_db()->prepare('SELECT photo_path FROM item_images WHERE entity_type = ? AND entity_id = ?');
+    $db = get_db();
+    $table = $type === 'found' ? 'found_items' : 'lost_items';
+    $coverStmt = $db->prepare("SELECT photo_path FROM {$table} WHERE id = ?");
+    $coverStmt->execute([$id]);
+    $cover = $coverStmt->fetchColumn();
+    $stmt = $db->prepare('SELECT photo_path FROM item_images WHERE entity_type = ? AND entity_id = ?');
     $stmt->execute([$type, $id]);
-    foreach ($stmt->fetchAll() as $row) {
-        retrieva_unlink_owned($row['photo_path'] ?? '');
+    $paths = retrieva_photo_paths($cover === false ? null : ($cover === null ? null : (string) $cover));
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $paths = array_merge($paths, retrieva_photo_paths((string) ($row['photo_path'] ?? '')));
     }
-    $delete = get_db()->prepare('DELETE FROM item_images WHERE entity_type = ? AND entity_id = ?');
+    foreach (array_unique($paths) as $path) {
+        retrieva_unlink_owned($path);
+    }
+    $delete = $db->prepare('DELETE FROM item_images WHERE entity_type = ? AND entity_id = ?');
     $delete->execute([$type, $id]);
 }
 
@@ -345,6 +485,7 @@ function client_map_found(array $row, bool $saved): array {
         'location_found' => (string) $row['location_found'],
         'date_found' => client_date($row['date_found'] ?? null),
         'photo' => client_photo_src($row['photo_path'] ?? null),
+        'photo_path' => (string) ($row['photo_path'] ?? ''),
         'summary' => client_public_summary($row['public_summary'] ?? null),
         'status' => (string) $row['status'],
         'saved' => $saved,
@@ -363,6 +504,7 @@ function client_map_lost(array $row, bool $saved): array {
         'date_lost_raw' => substr((string) ($row['date_lost'] ?? ''), 0, 10),
         'date_reported' => client_date($row['created_at'] ?? null),
         'photo' => client_photo_src($row['photo_path'] ?? null),
+        'photo_path' => (string) ($row['photo_path'] ?? ''),
         'description' => (string) ($row['description'] ?? ''),
         'status' => (string) $row['status'],
         'label' => client_lost_label((string) $row['status']),
@@ -402,6 +544,7 @@ function client_map_claim(array $row, bool $includeSecret): array {
         'location' => (string) ($row['location_found'] ?? ''),
         'date_found' => client_date($row['date_found'] ?? null),
         'photo' => client_photo_src($row['photo_path'] ?? null),
+        'photo_path' => (string) ($row['photo_path'] ?? ''),
         'summary' => client_public_summary($row['public_summary'] ?? null),
         'status' => (string) $row['status'],
         'label' => client_claim_label($row),
@@ -414,7 +557,7 @@ function client_map_claim(array $row, bool $includeSecret): array {
         'answer' => $includeSecret ? $answer : '',
         'show_qr' => $showQr,
         'qr_token' => $showQr ? (string) $row['qr_token'] : '',
-        'pickup_code' => $showQr ? (string) (($row['return_code'] ?? '') !== '' ? $row['return_code'] : ($row['public_code'] ?? '')) : '',
+        'pickup_location' => $showQr ? (string) ($row['pickup_location'] ?? '') : '',
     ];
 }
 
@@ -455,7 +598,7 @@ function client_dashboard_data(int $userId): array {
     $claimStmt = get_db()->prepare(
         "SELECT c.id, c.public_code, c.status, c.rejection_reason, c.created_at, c.reviewed_at, c.claimant_answers,
                 f.id AS found_item_id, f.item_name, f.category, f.location_found, f.date_found, f.photo_path, f.public_summary,
-                p.id AS pickup_id, p.qr_token, p.expires_at, p.scanned_at, p.status AS pickup_status, p.return_code
+                p.id AS pickup_id, p.qr_token, p.pickup_location, p.expires_at, p.scanned_at, p.status AS pickup_status, p.return_code
          FROM claims c
          JOIN found_items f ON f.id = c.found_item_id
          LEFT JOIN pickups p ON p.claim_id = c.id

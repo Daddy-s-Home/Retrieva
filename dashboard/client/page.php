@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../_bootstrap.php';
 require_once __DIR__ . '/../../database/client/lib.php';
+require_once __DIR__ . '/views.php';
 require_once __DIR__ . '/prefetch.php';
 
 if (!role_can($role, RETRIEVA_CLIENT_ROLES)) {
@@ -42,14 +43,17 @@ $titles = [
 <link rel="stylesheet" href="../assets/theme.css">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="client/client.css">
+<link rel="stylesheet" href="photo-picker.css">
+<link rel="stylesheet" href="item-photo-gallery.css">
 <link rel="stylesheet" href="<?= h($meta['css']) ?>">
 <?php client_prefetch_head($clientModule); ?>
 </head>
 <body class="client-shell" data-page="<?= h($clientModule) ?>" data-role="<?= h($role) ?>">
-<aside class="sidebar client-sidebar">
+<aside class="sidebar client-sidebar" id="dashboard-sidebar">
   <div class="sidebar__brand client-brand">
-    <img src="../assets/icons/logo.svg" alt="" width="36" height="36">
+    <img src="../assets/icons/logo.png" alt="" width="36" height="36">
     <span><strong>Retrieva</strong><small>University of Makati<br>Lost &amp; Found System</small></span>
+    <button class="sidebar__close" id="sidebar-close" type="button" aria-controls="dashboard-sidebar" aria-label="Close navigation menu">×</button>
   </div>
   <nav class="sidebar__nav" aria-label="Client">
     <?php
@@ -78,7 +82,7 @@ $titles = [
 </aside>
 <div class="main-col">
   <header class="topbar client-topbar">
-    <button class="topbar__menu-toggle" id="sidebar-toggle" type="button" aria-label="Toggle sidebar">Menu</button>
+    <button class="topbar__menu-toggle" id="sidebar-toggle" type="button" aria-controls="dashboard-sidebar" aria-expanded="false" aria-label="Open navigation menu">☰</button>
     <form class="topbar__search" id="client-search-form" method="get" action="<?= h($searchAction) ?>" data-search-module="<?= h($searchModule) ?>" role="search">
       <label class="visually-hidden" for="client-search"><?= h($meta['search']) ?></label>
       <input id="client-search" type="search" name="q" placeholder="<?= h($meta['search']) ?>">
@@ -117,6 +121,7 @@ $titles = [
     <div id="client-drawer-body"></div>
   </div>
 </div>
+<?= dashboard_photo_gallery_dialog() ?>
 <?php
 if ($role === 'student' && empty($user['student_id'])) {
     include __DIR__ . '/../components/student-id-modal.php';
@@ -125,8 +130,10 @@ if ($role === 'student' && empty($user['student_id'])) {
 }
 ?>
 <script src="dashboard.js"></script>
+<script src="photo-picker.js"></script>
 <script src="client/qrcode.js"></script>
 <script src="client/client.js"></script>
+<script src="item-photo-gallery.js"></script>
 <script src="<?= h($meta['js']) ?>"></script>
 </body>
 </html>

@@ -54,14 +54,18 @@ $pendingCount = (int) $db->query("SELECT COUNT(*) FROM claims WHERE status IN ('
 // -------------------------------------------------------------------------
 // 2. CATEGORY BREAKDOWN
 // -------------------------------------------------------------------------
-$categories = ['Electronics', 'Clothing', 'IDs & Cards', 'Accessories', 'Books & Papers', 'Others'];
-$categoryCounts = array_fill_keys($categories, 0);
-
-$catRows = $db->query('SELECT category, COUNT(*) AS total FROM found_items GROUP BY category')->fetchAll();
-foreach ($catRows as $row) {
-    if (isset($categoryCounts[$row['category']])) {
-        $categoryCounts[$row['category']] = (int) $row['total'];
-    }
+$categoryPalette = ['#2E6FF2', '#F5A623', '#7C5CFC', '#17A673', '#C44747', '#5C6B7A', '#16A0A8', '#BA4C96', '#A06D2C', '#507D2B', '#7A6E5B', '#8E6C8A'];
+$foundCategoryRows = $isAdminSide ? dashboard_category_rows($db, 'found_items') : [];
+$lostCategoryRows = dashboard_category_rows($db, 'lost_items');
+$initialCategoryType = $isAdminSide ? 'found' : 'lost';
+$initialCategoryRows = $isAdminSide ? $foundCategoryRows : $lostCategoryRows;
+$initialCategoryHasData = array_sum(array_column($initialCategoryRows, 'total')) > 0;
+$categoryChartData = json_encode(
+    ['found' => $foundCategoryRows, 'lost' => $lostCategoryRows],
+    JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES
+);
+if ($categoryChartData === false) {
+    throw new RuntimeException('Unable to encode category chart data.');
 }
 
 // -------------------------------------------------------------------------
@@ -227,32 +231,35 @@ for ($i = 6; $i >= 0; $i--) {
     </section>
 
     <section class="dash-grid<?= $isAdminSide ? '' : ' dash-grid--2col' ?>">
-      <div class="card">
+      <div class="card category-chart-card">
         <div class="card__header">
           <h3>Items by Category</h3>
         </div>
-        <div style="display:grid; grid-template-columns: 132px minmax(0, 1fr); align-items:center; gap:18px; margin:auto 0;">
-          <div style="position:relative; width:132px; height:132px;">
-            <canvas id="categoryChart"></canvas>
-          </div>
-          <ul style="list-style:none; padding:0; margin:0; font-size:12.5px; display:flex; flex-direction:column; gap:8px; min-width:0;">
-            <?php 
-              $palette = ['#2E6FF2', '#F5A623', '#7C5CFC', '#17A673', '#C7CDD9', '#1F2A3D'];
-              $i = 0;
-              foreach ($categoryCounts as $category => $count): 
-                $color = $palette[$i % count($palette)];
-                $i++;
-            ?>
-              <li style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                <span style="display:inline-flex; align-items:center; gap:8px; text-align:left; min-width:0;">
-                  <span style="width:8px; height:8px; border-radius:50%; background:<?= $color ?>; flex-shrink:0;"></span>
-                  <span><?= h($category) ?></span>
-                </span>
-                <strong style="font-size:12.5px; color:var(--c-text-muted); flex-shrink:0;" data-category-count="<?= h($category) ?>"><?= $count ?></strong>
-              </li>
-            <?php endforeach; ?>
-          </ul>
+        <?php if ($isAdminSide): ?>
+        <div class="legacy-category-tabs" id="legacy-category-tabs" role="tablist" aria-label="Choose item type">
+          <button class="legacy-category-tab" id="legacy-category-tab-found" type="button" role="tab" aria-selected="true" aria-controls="legacy-category-panel" tabindex="0" data-category-tab="found">Found Items</button>
+          <button class="legacy-category-tab" id="legacy-category-tab-lost" type="button" role="tab" aria-selected="false" aria-controls="legacy-category-panel" tabindex="-1" data-category-tab="lost">Lost Items</button>
         </div>
+        <?php endif; ?>
+        <div class="category-chart-layout" <?= $isAdminSide ? 'id="legacy-category-panel" role="tabpanel" aria-labelledby="legacy-category-tab-found" tabindex="0"' : '' ?>>
+          <div class="category-chart-layout__content">
+            <div class="category-chart-layout__chart">
+              <canvas id="categoryChart" role="img" aria-label="<?= $initialCategoryType === 'found' ? 'Found items by category' : 'Lost items by category' ?>"></canvas>
+            </div>
+            <ul class="category-chart-layout__legend legacy-category-legend" id="legacy-category-legend" aria-label="<?= $initialCategoryType === 'found' ? 'Found category totals' : 'Lost category totals' ?>" <?= $initialCategoryHasData ? '' : 'hidden' ?>>
+              <?php foreach ($initialCategoryRows as $index => $row): ?>
+                <li>
+                  <span class="legacy-category-legend-label">
+                    <span class="legacy-category-legend-swatch" style="background-color:<?= $categoryPalette[$index % count($categoryPalette)] ?>" aria-hidden="true"></span>
+                    <span class="legacy-category-legend-name"><?= h((string) $row['label']) ?></span>
+                  </span>
+                  <strong class="legacy-category-legend-count"><?= (int) $row['total'] ?></strong>
+                </li>
+              <?php endforeach; ?>
+            </ul>
+          </div>
+        </div>
+        <p class="legacy-category-empty-state" id="legacy-category-empty-state" role="status" aria-live="polite" <?= $initialCategoryHasData ? 'hidden' : '' ?>>No <?= $initialCategoryType ?> item categories have been recorded yet.</p>
       </div>
 
       <div class="card">
@@ -363,32 +370,155 @@ if ($role === 'student' && empty($user['student_id'])) {
       });
     }
 
-    // 2. Donut Chart rendering
-    const ctx2 = document.getElementById('categoryChart');
-    if (ctx2 && window.Chart) {
-      window.retrievaCategoryChart = new Chart(ctx2, {
-        type: 'doughnut',
-        data: {
-          labels: <?= json_encode(array_keys($categoryCounts)) ?>,
-          datasets: [{ 
-            data: <?= json_encode(array_values($categoryCounts)) ?>, 
-            backgroundColor: ['#2E6FF2','#F5A623','#7C5CFC','#17A673','#C7CDD9','#1F2A3D'], 
-            borderWidth: 0,
-            hoverOffset: 10
-          }],
-        },
-        options: { 
-          responsive: true,
-          maintainAspectRatio: false,
-          cutout: '70%', 
-          animation: { animateRotate: true, animateScale: true, duration: 650 },
-          plugins: {
-            legend: { display: false },
-            tooltip: { backgroundColor: '#1F2A3D', padding: 10, cornerRadius: 8 }
-          } 
-        },
+    // 2. Category chart and role-specific tabs
+    const categoryCanvas = document.getElementById('categoryChart');
+    const categoryData = <?= $categoryChartData ?>;
+    const adminCategoryTabsEnabled = <?= $isAdminSide ? 'true' : 'false' ?>;
+    const categoryTabs = Array.from(document.querySelectorAll('[data-category-tab]'));
+    const categoryTabList = document.getElementById('legacy-category-tabs');
+    const categoryPanel = document.getElementById('legacy-category-panel');
+    const categoryLegend = document.getElementById('legacy-category-legend');
+    const categoryEmptyState = document.getElementById('legacy-category-empty-state');
+    const categoryColors = <?= json_encode($categoryPalette) ?>;
+    let categoryChart = null;
+
+    function renderCategoryLegend(rows, itemType, hasData) {
+      if (!categoryLegend || !categoryEmptyState) return;
+      categoryLegend.replaceChildren();
+
+      categoryLegend.hidden = false;
+      categoryEmptyState.textContent = `No ${itemType} item categories have been recorded yet.`;
+      categoryEmptyState.hidden = hasData;
+      rows.forEach((row, index) => {
+        const item = document.createElement('li');
+        const label = document.createElement('span');
+        const swatch = document.createElement('span');
+        const name = document.createElement('span');
+        const count = document.createElement('strong');
+
+        label.className = 'legacy-category-legend-label';
+        swatch.className = 'legacy-category-legend-swatch';
+        swatch.style.backgroundColor = categoryColors[index % categoryColors.length];
+        swatch.setAttribute('aria-hidden', 'true');
+        name.className = 'legacy-category-legend-name';
+        name.textContent = String(row.label);
+        count.className = 'legacy-category-legend-count';
+        count.textContent = String(row.total);
+
+        label.append(swatch, name);
+        item.append(label, count);
+        categoryLegend.append(item);
       });
     }
+
+    function renderCategoryChart(requestedType) {
+      if (!categoryCanvas) return;
+      const itemType = adminCategoryTabsEnabled && requestedType === 'lost' ? 'lost' : (adminCategoryTabsEnabled ? 'found' : 'lost');
+      const rows = Array.isArray(categoryData[itemType]) ? categoryData[itemType] : [];
+      const hasData = rows.some((row) => Number(row.total) > 0);
+
+      if (adminCategoryTabsEnabled) {
+        categoryTabs.forEach((tab) => {
+          const selected = tab.dataset.categoryTab === itemType;
+          tab.setAttribute('aria-selected', String(selected));
+          tab.tabIndex = selected ? 0 : -1;
+        });
+        categoryPanel?.setAttribute('aria-labelledby', `legacy-category-tab-${itemType}`);
+      }
+
+      categoryCanvas.setAttribute('aria-label', `${itemType === 'found' ? 'Found' : 'Lost'} items by category`);
+      categoryLegend?.setAttribute('aria-label', `${itemType === 'found' ? 'Found' : 'Lost'} category totals`);
+      renderCategoryLegend(rows, itemType, hasData);
+
+      if (categoryChart) {
+        categoryChart.destroy();
+        categoryChart = null;
+      }
+      if (!window.Chart) {
+        categoryCanvas.hidden = true;
+        if (categoryEmptyState) {
+          categoryEmptyState.textContent = hasData
+            ? 'The chart library is unavailable. Reload the page to try again.'
+            : `No ${itemType} item categories have been recorded yet. The chart library is unavailable.`;
+          categoryEmptyState.hidden = false;
+        }
+        return;
+      }
+
+      categoryCanvas.hidden = false;
+      const labels = rows.map((row) => {
+        const label = String(row.label);
+        if (label === 'Food containers and utensils') return ['Food containers', 'and utensils'];
+        if (label === 'Tumbler/Flask/Bottled Water') return ['Tumbler/Flask/', 'Bottled Water'];
+        return label;
+      });
+      const values = rows.map((row) => Number(row.total));
+      categoryChart = new window.Chart(categoryCanvas, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: rows.map((row, index) => categoryColors[index % categoryColors.length]),
+            borderWidth: 0,
+            borderRadius: 4,
+            maxBarThickness: 22,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          animation: { duration: 450 },
+          plugins: {
+            legend: { display: false },
+            tooltip: { enabled: hasData, backgroundColor: '#1F2A3D', padding: 10, cornerRadius: 8 },
+          },
+          scales: {
+            x: { beginAtZero: true, ticks: { precision: 0, stepSize: 1 } },
+            y: { reverse: true, grid: { display: false }, ticks: { autoSkip: false } },
+          },
+        },
+      });
+      window.retrievaCategoryChart = categoryChart;
+    }
+
+    categoryTabList?.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const tab = target.closest('[data-category-tab]');
+      if (!tab || !categoryTabList.contains(tab)) return;
+      renderCategoryChart(tab.dataset.categoryTab);
+    });
+    categoryTabList?.addEventListener('keydown', (event) => {
+      const currentIndex = categoryTabs.indexOf(event.target);
+      if (currentIndex < 0) return;
+      let nextIndex = currentIndex;
+      if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % categoryTabs.length;
+      else if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + categoryTabs.length) % categoryTabs.length;
+      else if (event.key === 'Home') nextIndex = 0;
+      else if (event.key === 'End') nextIndex = categoryTabs.length - 1;
+      else return;
+      event.preventDefault();
+      categoryTabs[nextIndex].focus();
+      renderCategoryChart(categoryTabs[nextIndex].dataset.categoryTab);
+    });
+
+    window.retrievaUpdateCategoryData = (updatedCategoryData) => {
+      if (!updatedCategoryData || typeof updatedCategoryData !== 'object') {
+        throw new TypeError('Invalid dashboard category data.');
+      }
+      if (adminCategoryTabsEnabled && Array.isArray(updatedCategoryData.found)) {
+        categoryData.found = updatedCategoryData.found;
+      }
+      if (Array.isArray(updatedCategoryData.lost)) {
+        categoryData.lost = updatedCategoryData.lost;
+      }
+      const selectedTab = categoryTabs.find((tab) => tab.getAttribute('aria-selected') === 'true');
+      renderCategoryChart(selectedTab?.dataset.categoryTab || 'lost');
+    };
+
+    renderCategoryChart(adminCategoryTabsEnabled ? 'found' : 'lost');
   });
 </script>
 </body>

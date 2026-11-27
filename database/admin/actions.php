@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/lib.php';
+require_once __DIR__ . '/../pickup_helper.php';
 
 $session = admin_guard();
 $actorId = (int) $session['user_id'];
@@ -105,7 +106,7 @@ function admin_item_fields(array $input, string $dateKey): array {
     $dateValue = (string) ($input[$dateKey] ?? '');
     $date = DateTime::createFromFormat('Y-m-d', $dateValue);
     $validDate = $date instanceof DateTime && $date->format('Y-m-d') === $dateValue && $dateValue <= date('Y-m-d');
-    if ($name === '' || strlen($name) > 150 || $location === '' || strlen($location) > 150 || !in_array($category, CLIENT_CATEGORIES, true) || !$validDate) {
+    if ($name === '' || strlen($name) > 150 || $location === '' || strlen($location) > 150 || !in_array($category, ITEM_CATEGORY_OPTIONS, true) || !$validDate) {
         throw new InvalidArgumentException('Enter a valid item, category, location, and date.');
     }
     return [$name, $category, $location, $dateValue];
@@ -275,6 +276,7 @@ function admin_notify_match(int $actorId, array $input): void {
 function admin_review_claim(int $actorId, array $input, string $status): void {
     $id = admin_id($input, 'claim_id');
     $reason = trim((string) ($input['rejection_reason'] ?? ''));
+    $pickupLocation = $status === 'approved' ? retrieva_pickup_location($input) : '';
     if ($status === 'rejected' && ($reason === '' || strlen($reason) > 500)) {
         throw new InvalidArgumentException('Enter a reason for the rejection.');
     }
@@ -295,12 +297,17 @@ function admin_review_claim(int $actorId, array $input, string $status): void {
             $stmt = $db->prepare('UPDATE lost_items SET verified_at = COALESCE(verified_at, NOW()) WHERE id = ?');
             $stmt->execute([(int) $claim['lost_item_id']]);
         }
-        if (client_count('SELECT COUNT(*) FROM pickups WHERE claim_id = ?', [$id]) === 0) {
+        $pickupStmt = $db->prepare('SELECT id FROM pickups WHERE claim_id = ? FOR UPDATE');
+        $pickupStmt->execute([$id]);
+        if ($pickupStmt->fetch()) {
+            $pickupStmt = $db->prepare('UPDATE pickups SET pickup_location = ? WHERE claim_id = ?');
+            $pickupStmt->execute([$pickupLocation, $id]);
+        } else {
             $token = bin2hex(random_bytes(16));
-            $stmt = $db->prepare("INSERT INTO pickups (claim_id, qr_token, status) VALUES (?, ?, 'pending')");
-            $stmt->execute([$id, $token]);
+            $pickupStmt = $db->prepare("INSERT INTO pickups (claim_id, pickup_location, qr_token, status) VALUES (?, ?, ?, 'pending')");
+            $pickupStmt->execute([$id, $pickupLocation, $token]);
         }
-        client_notify((int) $claim['claimant_id'], 'claim', 'Your claim was approved', 'Bring your pickup code to the security office.', 'claim', $id);
+        client_notify((int) $claim['claimant_id'], 'claim', 'Your claim was approved', retrieva_claim_approved_message($pickupLocation), 'claim', $id);
     } else {
         $others = client_count("SELECT COUNT(*) FROM claims WHERE found_item_id = ? AND id <> ? AND status IN ('pending', 'manual_review', 'approved')", [(int) $claim['found_item_id'], $id]);
         if ($others === 0) {

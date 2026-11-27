@@ -1,32 +1,35 @@
 ---
 name: web-security
-description: "Use for defensive PHP security review, OWASP risks, authentication, authorization, CSRF, XSS, SQL injection, file uploads, secrets, API security, and secure coding in Retrieva."
+description: "Use for defensive PHP security review in Retrieva, OWASP risks, authentication, TOTP/OAuth, CSRF, XSS, SQL injection, file uploads, audit logging, secrets, and secure coding."
 ---
 
 # Web Security
 
 ## Scope
 
-Perform defensive, scoped security review for Retrieva's native PHP codebase. Do not execute destructive testing or claim a system is secure without evidence.
+Perform defensive, scoped security review for Retrieva's PHP 8+ codebase (`auth/`, `dashboard/`, `database/`, `uploads/`). Do not execute destructive testing or claim a system is secure without evidence.
 
 ## Review Areas
 
-- Input validation and output encoding (`h()` from `database/db.php`)
-- Authentication, sessions (`start_session()`), password storage (`PASSWORD_BCRYPT`), Google OAuth (`ALLOWED_EMAIL_DOMAIN = 'umak.edu.ph'`), and `totp_challenges` lifecycle
-- Authorization at PHP page and `database/` endpoint boundaries (`require_login()`, `require_role()`, `dashboard/rbac.php`)
-- IDOR and record ownership (`reported_by`, `claimant_id`, `user_id`)
-- Zero-knowledge claim protection (do not leak `found_items.photo_path` or unmasked `masked_features` to unapproved claimants)
-- SQL injection (use PDO prepared statements with `ATTR_EMULATE_PREPARES => false`)
-- CSRF (`csrf_field()`, `verify_csrf()`) and XSS prevention
-- Safe file uploads (validate MIME/content, size, and storage path; never trust file names or extensions)
-- Secret hygiene (avoid committing real SMTP passwords or OAuth secrets; keep backups/dumps/metadata out of web-accessible paths)
+- Input validation and context-aware output encoding (`htmlspecialchars(..., ENT_QUOTES, 'UTF-8')`)
+- Authentication, PHP sessions, password storage (`password_hash`/`password_verify`), TOTP MFA, and Google OAuth state/callback validation
+- Authorization at page (`_bootstrap.php`, `rbac.php`) and endpoint (`database/admin/`, `database/client/`) boundaries
+- IDOR and record ownership checks on lost reports, claims, pickups, and notifications
+- SQL injection prevention via PDO prepared statements
+- CSRF protection via `csrf_token()`, `csrf_field()`, and `verify_csrf()` on state-changing requests
+- Safe file uploads in `uploads/` (size, extension, MIME/content verification, safe filenames, non-executable storage)
+- Audit logging via `log_audit()` for administrative and security-sensitive actions
+- Secret handling (never hardcode or commit OAuth secrets, SMTP passwords, or DB credentials)
+- Error handling, cookie flags (`HttpOnly`, `SameSite`, `Secure` over HTTPS), and pagination bounds
 
-## Native PHP Rules
+## PHP Security Rules
 
-- Always use parameterized PDO queries via `get_db()`.
-- Escape HTML output with `h()` according to context.
-- Check `require_login()` / `require_role()` before fetching or modifying sensitive resources.
-- Log security-sensitive actions to `audit_trail`.
+- Use parameterized PDO queries; never interpolate user input into SQL.
+- Escape HTML output according to context.
+- Check `require_login()` / `require_role()` and `verify_csrf()` before fetching or modifying sensitive resources.
+- Never trust file names, extensions, MIME headers, hidden form fields, or client-side state.
+- Keep configuration secrets, SQL dumps, backups, and source control metadata inaccessible from public routes.
+- Disable verbose error/stack-trace output in production.
 
 ## Review Output
 
@@ -35,4 +38,7 @@ Perform defensive, scoped security review for Retrieva's native PHP codebase. Do
 3. Affected files and lines
 4. Exploit scenario
 5. Recommended minimal fix
-6. Validation check
+6. Validation or regression test
+
+Source: adapted from Antigravity [security-scanning-security-sast](https://github.com/benjaminasterA/antigravity-awesome-skills/blob/main/skills/security-scanning-security-sast/SKILL.md).
+

@@ -1,38 +1,31 @@
 ---
 name: php-backend
-description: "Use for Retrieva native PHP (>=8.0) backend development, endpoints in database/, PDO/MySQL, sessions, CSRF, Composer packages (Google OAuth, PHPMailer, Pusher), and validation."
+description: "Use for Retrieva's framework-neutral PHP 8+ backend development, page-per-route handlers, PDO/MySQL, sessions, auth, APIs, Composer packages, and error handling."
 ---
 
 # PHP Backend
 
 ## Scope
 
-Retrieva is built with **native PHP >= 8.0** running on XAMPP Apache (no Laravel or external MVC framework). Keep all backend logic in native PHP using the project's existing helpers.
-
-## Project Helpers (`database/db.php`)
-
-- `get_db(): PDO` — shared PDO connection (`retrieva_db`, `utf8mb4`, `ERRMODE_EXCEPTION`, `FETCH_ASSOC`, `EMULATE_PREPARES => false`).
-- `start_session(): void` — starts session with `httponly: true`, `samesite: 'Lax'`.
-- `h(?string $value): string` — HTML escaping via `htmlspecialchars(..., ENT_QUOTES, 'UTF-8')`.
-- `csrf_token(): string`, `csrf_field(): string`, `verify_csrf(?string $submitted): bool`.
-- `json_out(array $payload, int $code = 200): void` — structured JSON response + `exit`.
-- `require_login(): array` and `require_role(array $allowed_roles): array`.
+Use this skill for Retrieva's server-side PHP 8+ monolith across `auth/`, `dashboard/`, and `database/` (`db.php`, `admin/`, `client/`, mail/SMS/OAuth/TOTP scripts).
 
 ## Backend Standards
 
-- Use `declare(strict_types=1);` in PHP files.
-- Always use PDO prepared statements with bound parameters (`?` or `:name`); never interpolate user input into SQL.
-- Validate required fields, types, lengths, enums, and uploaded files at the boundary.
-- Enforce `verify_csrf()` on state-changing HTML form posts and `require_login()` / `require_role()` on protected endpoints.
-- Use `password_hash(..., PASSWORD_BCRYPT)` and `password_verify()` for passwords.
-- Use Composer packages declared in `composer.json` (`vendor/autoload.php`):
-  - `league/oauth2-google` (`database/oauth_config.php`, `google_oauth_redirect.php`, `google_oauth_callback.php`)
-  - `phpmailer/phpmailer` (`database/mailer.php`)
-  - `pusher/pusher-php-server`
-- Use PDO transactions (`beginTransaction()` / `commit()` / `rollBack()`) for multi-table mutations (e.g., claim approval + pickup QR creation).
+- Follow PSR-12 style and keep functions small and explicit.
+- Reuse `database/db.php` for the shared PDO connection, session initialization, CSRF helpers (`csrf_token()`, `csrf_field()`, `verify_csrf()`), auth guards (`require_login()`, `require_role()`, `require_login_page()`, `require_role_page()`), and `log_audit()`.
+- Reuse `dashboard/_bootstrap.php` for dashboard page authentication, role resolution, and user context.
+- Use PDO prepared statements for all database operations.
+- Validate Content-Type, required fields, data types, lengths, enums, and file uploads at request boundaries.
+- Enforce server-side authorization on every protected page, module payload, and action endpoint (`database/admin/`, `database/client/`).
+- Return consistent HTTP status codes and structured JSON or HTML responses.
+- Never expose database credentials, OAuth secrets, stack traces, or internal paths in production responses.
+- Use `password_hash()` / `password_verify()` and secure session cookie settings.
+- Use database transactions (`beginTransaction()`, `commit()`, `rollBack()`) for multi-table mutations (e.g., claim approval + pickup token + audit log).
+- Preserve existing Composer dependencies (`league/oauth2-google`, `phpmailer/phpmailer`) and never manually edit `vendor/`.
 
 ## Validation
 
 - Run syntax checks on modified PHP files: `php -l <file>`
-- Verify SQL queries and JSON responses against representative `retrieva_db` data.
-- Verify authenticated, unauthenticated, and cross-role cases.
+- Verify SQL behavior against `retrieva_db` schema definitions.
+- Verify authorization with authenticated, unauthenticated, and cross-role cases.
+

@@ -34,7 +34,10 @@ function bindAdminSettings() {
   passwordForm?.addEventListener('submit', async (event) => {
     event.preventDefault(); const button = passwordForm.querySelector('button[type="submit"]'); const fields = new FormData(passwordForm); const password = String(fields.get('password') || ''); const confirmPassword = String(fields.get('confirm_password') || '');
     if (!updatePasswordChecklist(password)) return setFeedback(passwordFeedback, 'Password does not meet all security criteria.'); if (password !== confirmPassword) return setFeedback(passwordFeedback, 'Passwords do not match.');
-    button.disabled = true; const result = await settingsPost('change_password.php', { current_password: fields.get('current_password'), password, confirm_password: confirmPassword }); button.disabled = false; setFeedback(passwordFeedback, result.message || 'Password update failed.', result.success); if (result.success) { passwordForm.reset(); updatePasswordChecklist(''); }
+    const verification = fields.has('totp_code')
+      ? { totp_code: String(fields.get('totp_code') || '').trim() }
+      : { current_password: fields.get('current_password') };
+    button.disabled = true; const result = await settingsPost('change_password.php', { ...verification, password, confirm_password: confirmPassword }); button.disabled = false; setFeedback(passwordFeedback, result.message || 'Password update failed.', result.success); if (result.success) { passwordForm.reset(); updatePasswordChecklist(''); }
   });
   const loginMethodForm = document.getElementById('login-method-form');
   const loginNote = document.getElementById('login-method-note');

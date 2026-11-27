@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../components/photo-picker.php';
+require_once __DIR__ . '/../components/item-photo-gallery.php';
+
 function client_icon(string $name): string {
     $paths = [
         'home' => '<path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5Z"/>',
@@ -49,11 +52,11 @@ function client_kpi(string $tone, string $icon, string $value, string $label, st
     return '<article class="kpi kpi--' . h($tone) . '"><div class="kpi__icon">' . client_icon($icon) . '</div><div><div class="kpi__value">' . h($value) . '</div><div class="kpi__label">' . h($label) . '</div><div class="kpi__delta kpi__delta--' . h($direction) . '">' . h($delta) . '</div></div></article>';
 }
 
-function client_photo(string $src, string $name): string {
-    if ($src === '') {
-        return '<div class="item-card__photo item-card__photo--empty" aria-hidden="true">' . client_icon('box') . '</div>';
+function client_photo(string $src, string $name, array $photos = [], string $variant = 'row'): string {
+    if ($photos === [] && $src !== '') {
+        $photos = [['src' => $src]];
     }
-    return '<img class="item-card__photo" src="' . h($src) . '" alt="' . h($name) . '">';
+    return dashboard_photo_preview($photos, $name, $variant);
 }
 
 function client_photo_gallery(array $photos, string $name): string {
@@ -70,31 +73,13 @@ function client_photo_gallery(array $photos, string $name): string {
 function client_cover_map(array $items, string $idKey = 'id'): array {
     $covers = [];
     foreach ($items as $item) {
-        $covers[(int) $item[$idKey]] = (string) ($item['photo'] ?? '');
+        $covers[(int) $item[$idKey]] = (string) ($item['photo_path'] ?? $item['photo'] ?? '');
     }
     return $covers;
 }
 
 function client_photo_picker(array $photos): string {
-    $html = '<fieldset class="photo-picker" data-photo-picker><legend>Photos</legend><p class="muted">Add 1 to 5 photos. Use the camera or choose files.</p>';
-    if ($photos !== []) {
-        $html .= '<div class="photo-picker__current">';
-        foreach ($photos as $photo) {
-            $html .= '<label class="photo-thumb"><img src="' . h((string) ($photo['src'] ?? '')) . '" alt=""><span>Remove</span>';
-            if ((int) ($photo['id'] ?? 0) === 0) {
-                $html .= '<input type="checkbox" name="remove_legacy" value="1" data-existing-photo>';
-            } else {
-                $html .= '<input type="checkbox" name="remove_photos[]" value="' . (int) $photo['id'] . '" data-existing-photo>';
-            }
-            $html .= '</label>';
-        }
-        $html .= '</div>';
-    }
-    $html .= '<div class="photo-picker__preview" data-photo-preview></div>';
-    $html .= '<input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple data-photo-files>';
-    $html .= '<button type="button" class="btn btn-ghost" data-photo-camera>Use camera</button>';
-    $html .= '<div class="photo-picker__camera" data-photo-stage hidden><video data-photo-video playsinline autoplay muted></video><button type="button" class="btn btn-primary" data-photo-snap>Capture</button><button type="button" class="btn btn-ghost" data-photo-stop>Close camera</button></div></fieldset>';
-    return $html;
+    return dashboard_photo_picker($photos);
 }
 
 function client_heart(string $type, int $id, bool $saved, string $redirect): string {
@@ -189,7 +174,7 @@ function client_claim_steps(array $item): string {
 }
 
 function client_lost_card(array $item, string $redirect, array $photos = []): string {
-    $html = '<article class="item-card"><div class="item-card__media">' . client_photo($item['photo'], $item['item_name']) . client_heart('lost', $item['id'], $item['saved'], $redirect) . '<span class="pill pill--' . h($item['status']) . '">' . h($item['label']) . '</span></div>';
+    $html = '<article class="item-card"><div class="item-card__media">' . client_photo($item['photo'], $item['item_name'], $photos, 'card') . client_heart('lost', $item['id'], $item['saved'], $redirect) . '<span class="pill pill--' . h($item['status']) . '">' . h($item['label']) . '</span></div>';
     $html .= '<div class="item-card__body"><h3>' . h($item['item_name']) . '</h3><p class="muted">' . client_icon('box') . ' ' . h($item['category']) . '</p><p class="muted">' . client_icon('pin') . ' ' . h($item['location'] !== '' ? $item['location'] : 'Location not given') . '</p><p class="muted">' . client_icon('calendar') . ' ' . h($item['date_reported']) . '</p>';
     if ($item['description'] !== '') {
         $html .= '<p class="item-card__copy">' . h($item['description']) . '</p>';
@@ -200,7 +185,7 @@ function client_lost_card(array $item, string $redirect, array $photos = []): st
 }
 
 function client_found_card(array $item, array $photos = []): string {
-    $html = '<article class="item-card"><div class="item-card__media">' . client_photo($item['photo'], $item['item_name']) . client_heart('found', $item['id'], $item['saved'], 'client-found-items.php') . '<span class="pill pill--cat">' . h($item['category']) . '</span></div>';
+    $html = '<article class="item-card"><div class="item-card__media">' . client_photo($item['photo'], $item['item_name'], $photos, 'card') . client_heart('found', $item['id'], $item['saved'], 'client-found-items.php') . '<span class="pill pill--cat">' . h($item['category']) . '</span></div>';
     $html .= '<div class="item-card__body"><h3>' . h($item['item_name']) . '</h3><p class="muted">' . client_icon('pin') . ' ' . h($item['location_found']) . '</p><p class="muted">' . client_icon('calendar') . ' ' . h($item['date_found']) . '</p><p class="item-card__copy">' . h($item['summary']) . '</p>';
     $html .= '<button type="button" class="btn btn-ghost" data-open-detail="found-' . $item['id'] . '">View Details</button></div>';
     $html .= '<template id="detail-found-' . $item['id'] . '"><h2 id="drawer-title">' . h($item['item_name']) . '</h2><p class="pill pill--cat">' . h($item['category']) . '</p>' . client_photo_gallery($photos, $item['item_name']) . '<p>' . h($item['summary']) . '</p><dl class="detail-list"><div><dt>Location found</dt><dd>' . h($item['location_found']) . '</dd></div><div><dt>Date found</dt><dd>' . h($item['date_found']) . '</dd></div><div><dt>Item</dt><dd>' . h($item['public_code']) . '</dd></div></dl>';
@@ -253,16 +238,26 @@ function client_view_dashboard(array $data): string {
     if (!$data['my_reports']) {
         $html .= '<p class="empty">You have not reported a lost item yet.</p>';
     }
+    $reportPhotos = retrieva_photo_map('lost', client_cover_map($data['my_reports']));
     foreach ($data['my_reports'] as $item) {
-        $html .= '<a class="mini-row" href="client-my-reports.php"><span>' . client_photo($item['photo'], $item['item_name']) . '</span><span><strong>' . h($item['item_name']) . '</strong><small>' . h($item['location']) . ' · ' . h($item['date_reported']) . '</small></span><span class="pill pill--' . h($item['status']) . '">' . h($item['label']) . '</span></a>';
+        $photos = $reportPhotos[(int) $item['id']] ?? [];
+        $html .= '<div class="mini-row mini-row--media">' . client_photo($item['photo'], $item['item_name'], $photos, 'row') . '<a class="mini-row__content" href="client-my-reports.php"><strong>' . h($item['item_name']) . '</strong><small>' . h($item['location']) . ' · ' . h($item['date_reported']) . '</small></a><span class="pill pill--' . h($item['status']) . '">' . h($item['label']) . '</span></div>';
     }
     $html .= '</section>';
     $html .= '<section class="panel"><div class="panel__head"><h2>My Claims</h2><a href="client-my-claims.php">View All</a></div>';
     if (!$data['my_claims']) {
         $html .= '<p class="empty">You have not filed a claim yet.</p>';
     }
+    $claimCovers = [];
     foreach ($data['my_claims'] as $item) {
-        $html .= '<a class="mini-row" href="client-my-claims.php"><span>' . client_photo($item['photo'], $item['item_name']) . '</span><span><strong>' . h($item['item_name']) . '</strong><small>Claimed on ' . h($item['claimed_on']) . '</small></span><span class="pill pill--' . h($item['status']) . '">' . h($item['label']) . '</span></a>';
+        if (!empty($item['found_id'])) {
+            $claimCovers[(int) $item['found_id']] = (string) ($item['photo_path'] ?? '');
+        }
+    }
+    $claimPhotos = retrieva_photo_map('found', $claimCovers);
+    foreach ($data['my_claims'] as $item) {
+        $photos = $claimPhotos[(int) ($item['found_id'] ?? 0)] ?? [];
+        $html .= '<div class="mini-row mini-row--media">' . client_photo($item['photo'], $item['item_name'], $photos, 'row') . '<a class="mini-row__content" href="client-my-claims.php"><strong>' . h($item['item_name']) . '</strong><small>Claimed on ' . h($item['claimed_on']) . '</small></a><span class="pill pill--' . h($item['status']) . '">' . h($item['label']) . '</span></div>';
     }
     $html .= '</section></div></div>';
     $html .= '<aside class="stack"><section class="panel"><div class="panel__head"><h2>Notifications</h2><a href="client-notifications.php">View All</a></div>';
@@ -325,7 +320,7 @@ function client_view_lost(array $data, bool $mine): string {
         $reportPhotos = retrieva_photo_map('lost', client_cover_map($data['items']));
         foreach ($data['items'] as $item) {
             $photos = $reportPhotos[(int) $item['id']] ?? [];
-            $html .= '<article class="report-row">' . client_photo($item['photo'], $item['item_name']) . '<div><h3>' . h($item['item_name']) . ' <span class="pill pill--' . h($item['status']) . '">' . h($item['label']) . '</span></h3><p class="muted">' . h($item['category']) . ' · ' . h($item['location']) . ' · ' . h($item['date_reported']) . '</p><p>' . h($item['description']) . '</p></div>' . client_report_steps($item) . '<div class="report-row__actions"><button type="button" class="btn btn-primary" data-open-detail="report-' . $item['id'] . '">View Details</button>';
+            $html .= '<article class="report-row">' . client_photo($item['photo'], $item['item_name'], $photos, 'row') . '<div><h3>' . h($item['item_name']) . ' <span class="pill pill--' . h($item['status']) . '">' . h($item['label']) . '</span></h3><p class="muted">' . h($item['category']) . ' · ' . h($item['location']) . ' · ' . h($item['date_reported']) . '</p><p>' . h($item['description']) . '</p></div>' . client_report_steps($item) . '<div class="report-row__actions"><button type="button" class="btn btn-primary" data-open-detail="report-' . $item['id'] . '">View Details</button>';
             $html .= '</div>';
             if ($item['can_edit']) {
                 $html .= '<details class="edit-disclosure"><summary>Edit Report</summary>' . client_report_form($item, $photos) . '</details>';
@@ -351,6 +346,7 @@ function client_view_lost(array $data, bool $mine): string {
 
 function client_report_form(?array $item, array $photos = []): string {
     $editing = $item !== null;
+    $selectedCategory = $editing ? dashboard_category_label((string) $item['category']) : '';
     $html = '<form class="stack-form" method="post" action="../database/client/actions.php" enctype="multipart/form-data" data-client-ajax id="' . ($editing ? 'edit-report-' . $item['id'] : 'report-lost-form') . '">';
     $html .= csrf_field();
     $html .= '<input type="hidden" name="action" value="' . ($editing ? 'update_report' : 'create_report') . '">';
@@ -359,9 +355,12 @@ function client_report_form(?array $item, array $photos = []): string {
         $html .= '<input type="hidden" name="item_id" value="' . $item['id'] . '">';
     }
     $html .= '<div class="form-grid"><label class="filter-field"><span>Item name</span><input name="item_name" maxlength="150" required value="' . h($editing ? $item['item_name'] : '') . '"></label>';
-    $html .= '<label class="filter-field"><span>Category</span><select name="category">';
-    foreach (CLIENT_CATEGORIES as $category) {
-        $html .= '<option value="' . h($category) . '"' . ($editing && $item['category'] === $category ? ' selected' : '') . '>' . h($category) . '</option>';
+    $html .= '<label class="filter-field"><span>Category</span><select name="category" required>';
+    if (!$editing || $selectedCategory === 'Unspecified') {
+        $html .= '<option value="" disabled selected>Select a category...</option>';
+    }
+    foreach (ITEM_CATEGORY_OPTIONS as $category) {
+        $html .= '<option value="' . h($category) . '"' . ($selectedCategory === $category ? ' selected' : '') . '>' . h($category) . '</option>';
     }
     $html .= '</select></label><label class="filter-field"><span>Last seen location</span><input name="last_seen_location" maxlength="150" value="' . h($editing ? $item['location'] : '') . '"></label>';
     $html .= '<label class="filter-field"><span>Date lost</span><input type="date" name="date_lost" required max="' . date('Y-m-d') . '" value="' . h($editing ? (string) ($item['date_lost_raw'] ?? '') : date('Y-m-d')) . '"></label></div>';
@@ -442,7 +441,7 @@ function client_view_claims(array $data): string {
     $claimPhotos = retrieva_photo_map('found', $claimCovers);
     foreach ($data['items'] as $item) {
         $photos = $claimPhotos[(int) ($item['found_id'] ?? 0)] ?? [];
-        $html .= '<article class="report-row">' . client_photo($item['photo'], $item['item_name']) . '<div><h3>' . h($item['item_name']) . ' <span class="pill pill--' . h($item['status']) . '">' . h($item['label']) . '</span></h3><p class="muted">' . h($item['category']) . ' · ' . h($item['location']) . '</p><p>Claimed on ' . h($item['claimed_on']) . '</p></div>' . client_claim_steps($item) . '<div class="claim-side"><strong>' . h($item['label']) . '</strong>';
+        $html .= '<article class="report-row">' . client_photo($item['photo'], $item['item_name'], $photos, 'row') . '<div><h3>' . h($item['item_name']) . ' <span class="pill pill--' . h($item['status']) . '">' . h($item['label']) . '</span></h3><p class="muted">' . h($item['category']) . ' · ' . h($item['location']) . '</p><p>Claimed on ' . h($item['claimed_on']) . '</p></div>' . client_claim_steps($item) . '<div class="claim-side"><strong>' . h($item['label']) . '</strong>';
         if ($item['show_qr']) {
             $html .= '<button type="button" class="btn btn-primary" data-open-detail="qr-' . $item['id'] . '">View Pickup QR</button>';
         }
@@ -462,7 +461,10 @@ function client_view_claims(array $data): string {
         }
         $html .= '</template>';
         if ($item['show_qr']) {
-            $html .= '<template id="detail-qr-' . $item['id'] . '"><h2 id="drawer-title">Pickup QR</h2><p>Show this code at the UMak Security Office.</p><div class="qr-box" data-qr-token="' . h($item['qr_token']) . '"></div><p class="pickup-code">' . h($item['pickup_code']) . '</p></template>';
+            $pickupLocation = $item['pickup_location'] !== ''
+                ? $item['pickup_location']
+                : 'No pickup location is recorded. Contact Campus Security to confirm where to collect your item.';
+            $html .= '<template id="detail-qr-' . $item['id'] . '"><h2 id="drawer-title">Pickup QR</h2><p>Show this code at the pickup location listed below.</p><div class="qr-box" data-qr-token="' . h($item['qr_token']) . '"></div><p class="pickup-location-label"><strong>Pickup location:</strong> ' . h($pickupLocation) . '</p><p class="pickup-code"><strong>Token fallback:</strong><code>' . h($item['qr_token']) . '</code></p></template>';
         }
         $html .= '</article>';
     }
@@ -558,7 +560,9 @@ function client_view_settings(array $data): string {
     if ($show('security')) {
         $html .= '<section class="panel" id="security">';
         if (!empty($user['password_is_set'])) {
-            $html .= '<h2>Change Password</h2><form id="change-password-form" class="stack-form"><label class="filter-field"><span>Current Password</span><input type="password" name="current_password" autocomplete="current-password" required></label><label class="filter-field"><span>New Password</span><input type="password" name="password" minlength="8" autocomplete="new-password" required></label><label class="filter-field"><span>Confirm New Password</span><input type="password" name="confirm_password" minlength="8" autocomplete="new-password" required></label><button class="btn btn-primary" type="submit">Update Password</button><p class="form-feedback" id="password-feedback" role="status"></p></form>';
+            $html .= '<h2>Change Password</h2><form id="change-password-form" class="stack-form"><label class="filter-field"><span>New Password</span><input type="password" name="password" minlength="8" autocomplete="new-password" required></label><label class="filter-field"><span>Confirm New Password</span><input type="password" name="confirm_password" minlength="8" autocomplete="new-password" required></label>';
+            $html .= !empty($user['totp_enabled']) ? '<label class="filter-field"><span>Authenticator code</span><input type="text" name="totp_code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required></label>' : '<label class="filter-field"><span>Current Password</span><input type="password" name="current_password" autocomplete="current-password" required></label>';
+            $html .= '<button class="btn btn-primary" type="submit">Update Password</button><p class="form-feedback" id="password-feedback" role="status"></p></form>';
         } else {
             $html .= '<h2>Create a Password</h2><form id="create-password-form" class="stack-form"><label class="filter-field"><span>New Password</span><input type="password" name="password" minlength="8" autocomplete="new-password" required></label><label class="filter-field"><span>Confirm New Password</span><input type="password" name="confirm_password" minlength="8" autocomplete="new-password" required></label><button class="btn btn-primary" type="submit">Create Password</button><p class="form-feedback" id="password-feedback" role="status"></p></form>';
         }

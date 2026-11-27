@@ -86,8 +86,9 @@ function admin_view_dashboard(array $data): string {
         $kpis .= client_kpi($tone, $icon, $value, $label, $delta, $direction);
     }
     $found = '';
+    $recentFoundPhotos = retrieva_photo_map('found', admin_cover_map($data['recent_found'], 'id', 'photo_path'));
     foreach ($data['recent_found'] as $row) {
-        $found .= '<a class="mini-row" href="admin-found-items.php?q=' . rawurlencode((string) $row['public_code']) . '"><strong>' . h($row['item_name']) . '</strong><small>' . h($row['location_found']) . ' · ' . h(client_date($row['date_found'])) . '</small><span class="pill pill--' . h($row['status']) . '">' . h(admin_label($row['status'])) . '</span></a>';
+        $found .= '<div class="mini-row mini-row--media">' . dashboard_photo_preview($recentFoundPhotos[(int) $row['id']] ?? [], (string) $row['item_name'], 'row') . '<a class="mini-row__content" href="admin-found-items.php?q=' . rawurlencode((string) $row['public_code']) . '"><strong>' . h($row['item_name']) . '</strong><small>' . h($row['location_found']) . ' · ' . h(client_date($row['date_found'])) . '</small></a><span class="pill pill--' . h($row['status']) . '">' . h(admin_label($row['status'])) . '</span></div>';
     }
     $claims = '';
     foreach ($data['pending_claims'] as $row) {
@@ -101,7 +102,15 @@ function admin_view_dashboard(array $data): string {
     return admin_intro('Dashboard', 'Campus lost and found activity for the security office.')
         . '<section class="kpi-grid">' . $kpis . '</section>'
         . '<div class="dash-layout"><section class="panel"><div class="panel__head"><h2>Found and lost this week</h2></div><canvas id="admin-trend-chart" height="120"></canvas><pre hidden id="admin-chart-data">' . h($chart) . '</pre></section>'
-        . '<section class="panel"><h2>By category</h2><canvas id="admin-category-chart" height="160"></canvas><h3>Locations</h3><ul class="note-list">' . admin_bars($data['chart']['locations']) . '</ul></section></div>'
+        . '<section class="panel admin-category-panel"><div class="panel__head"><h2>Items by Category</h2></div>'
+        . '<div class="admin-category-tabs" role="tablist" aria-label="Choose item type">'
+        . '<button class="admin-category-tab" id="admin-category-tab-found" type="button" role="tab" aria-selected="true" aria-controls="admin-category-panel" tabindex="0" data-category-tab="found">Found Items</button>'
+        . '<button class="admin-category-tab" id="admin-category-tab-lost" type="button" role="tab" aria-selected="false" aria-controls="admin-category-panel" tabindex="-1" data-category-tab="lost">Lost Items</button></div>'
+        . '<div class="category-chart-layout" id="admin-category-panel" role="tabpanel" aria-labelledby="admin-category-tab-found" tabindex="0">'
+        . '<div class="category-chart-layout__chart"><canvas id="admin-category-chart" role="img" aria-label="Found items by category"></canvas></div>'
+        . '<ul class="category-chart-layout__legend" id="admin-category-legend" aria-label="Category totals"></ul></div>'
+        . '<p class="admin-category-empty-state" id="admin-category-empty-state" role="status" aria-live="polite" hidden></p>'
+        . '<h3>Locations</h3><ul class="note-list">' . admin_bars($data['chart']['locations']) . '</ul></section></div>'
         . '<div class="split"><section class="panel"><div class="panel__head"><h2>Recent found items</h2><a href="admin-found-items.php">View all</a></div>' . ($found ?: '<p class="empty">No found items yet.</p>') . '</section>'
         . '<section class="panel"><div class="panel__head"><h2>Pending claims</h2><a href="admin-claims.php?status=pending">Review</a></div>' . ($claims ?: '<p class="empty">No claims are waiting.</p>') . '</section></div>'
         . '<section class="panel"><h2>Recent activity</h2>' . ($activity ?: '<p class="empty">No activity yet.</p>') . '</section>';
@@ -112,7 +121,7 @@ function admin_cover_map(array $rows, string $idKey, string $pathKey): array {
     foreach ($rows as $row) {
         $id = (int) ($row[$idKey] ?? 0);
         if ($id > 0) {
-            $covers[$id] = client_photo_src($row[$pathKey] ?? null);
+            $covers[$id] = (string) ($row[$pathKey] ?? '');
         }
     }
     return $covers;
@@ -137,8 +146,11 @@ function admin_view_lost(array $data): string {
     $lostPhotos = retrieva_photo_map('lost', admin_cover_map($data['rows'], 'id', 'photo_path'));
     foreach ($data['rows'] as $row) {
         $id = (int) $row['id'];
+        $selectedCategory = dashboard_category_label((string) $row['category']);
+        $categoryOptions = ($selectedCategory === 'Unspecified' ? '<option value="" disabled selected>Choose a category...</option>' : '')
+            . admin_options(ITEM_CATEGORY_OPTIONS, $selectedCategory);
         $photos = $lostPhotos[$id] ?? [];
-        $rows .= '<tr><td>' . h((string) $row['public_code']) . '</td><td><strong>' . h($row['item_name']) . '</strong></td><td>' . h($row['category']) . '</td><td>' . h($row['full_name']) . '</td><td>' . h((string) $row['last_seen_location']) . '</td><td>' . h(client_date($row['date_lost'])) . '</td><td><span class="pill pill--' . h($row['status']) . '">' . h(admin_label($row['status'])) . '</span></td><td><button class="btn btn-ghost" type="button" data-open-detail="lost-' . $id . '">Open</button></td></tr>';
+        $rows .= '<tr><td>' . dashboard_photo_preview($photos, (string) $row['item_name']) . '</td><td>' . h((string) $row['public_code']) . '</td><td><strong>' . h($row['item_name']) . '</strong></td><td>' . h($row['category']) . '</td><td>' . h($row['full_name']) . '</td><td>' . h((string) $row['last_seen_location']) . '</td><td>' . h(client_date($row['date_lost'])) . '</td><td><span class="pill pill--' . h($row['status']) . '">' . h(admin_label($row['status'])) . '</span></td><td><button class="btn btn-ghost" type="button" data-open-detail="lost-' . $id . '">Open</button></td></tr>';
         $delete = (int) $row['claim_count'] === 0
             ? '<form method="post" action="../database/admin/actions.php" data-client-ajax onsubmit="return confirm(\'Delete this lost report?\')">' . csrf_field() . '<input type="hidden" name="action" value="delete_lost"><input type="hidden" name="lost_id" value="' . $id . '"><input type="hidden" name="redirect" value="admin-lost-reports.php"><button class="btn btn-danger" type="submit">Delete</button></form>'
             : '<p class="muted">This report has a claim, so it stays on file.</p>';
@@ -146,7 +158,7 @@ function admin_view_lost(array $data): string {
             . client_photo_gallery($photos, $row['item_name'])             . '<form class="stack-form" method="post" action="../database/admin/actions.php" enctype="multipart/form-data" data-client-ajax>' . csrf_field()
             . '<input type="hidden" name="action" value="update_lost"><input type="hidden" name="lost_id" value="' . $id . '"><input type="hidden" name="redirect" value="admin-lost-reports.php">'
             . '<label class="filter-field">Item<input name="item_name" value="' . h($row['item_name']) . '" required></label>'
-            . '<label class="filter-field">Category<select name="category">' . admin_options(CLIENT_CATEGORIES, $row['category']) . '</select></label>'
+            . '<label class="filter-field">Category<select name="category" required>' . $categoryOptions . '</select></label>'
             . '<label class="filter-field">Location<input name="location" value="' . h((string) $row['last_seen_location']) . '" required></label>'
             . '<label class="filter-field">Date lost<input type="date" name="date_lost" value="' . h(substr((string) $row['date_lost'], 0, 10)) . '" required></label>'
             . '<label class="filter-field">Description<textarea name="description">' . h((string) $row['description']) . '</textarea></label>'
@@ -158,8 +170,8 @@ function admin_view_lost(array $data): string {
     return admin_intro('Lost Reports', 'Review, update, or close campus lost reports.')
         . '<section class="kpi-grid">' . $kpis . '</section>'
         . admin_filter('admin-lost-reports.php', $filters, CLIENT_LOST_STATUSES)
-        . '<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Code</th><th>Item</th><th>Category</th><th>Reporter</th><th>Location</th><th>Date lost</th><th>Status</th><th></th></tr></thead><tbody>'
-        . ($rows ?: '<tr><td colspan="8" class="empty">No reports match these filters.</td></tr>')
+        . '<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Photo</th><th>Code</th><th>Item</th><th>Category</th><th>Reporter</th><th>Location</th><th>Date lost</th><th>Status</th><th></th></tr></thead><tbody>'
+        . ($rows ?: '<tr><td colspan="9" class="empty">No reports match these filters.</td></tr>')
         . '</tbody></table></div>' . admin_pager('admin-lost-reports.php', $filters, $data['pages'], $filters['page']) . $details;
 }
 
@@ -170,8 +182,11 @@ function admin_view_found(array $data): string {
     $foundPhotos = retrieva_photo_map('found', admin_cover_map($data['rows'], 'id', 'photo_path'));
     foreach ($data['rows'] as $row) {
         $id = (int) $row['id'];
+        $selectedCategory = dashboard_category_label((string) $row['category']);
+        $categoryOptions = ($selectedCategory === 'Unspecified' ? '<option value="" disabled selected>Choose a category...</option>' : '')
+            . admin_options(ITEM_CATEGORY_OPTIONS, $selectedCategory);
         $photos = $foundPhotos[$id] ?? [];
-        $rows .= '<tr><td>' . h((string) $row['public_code']) . '</td><td><strong>' . h($row['item_name']) . '</strong></td><td>' . h($row['category']) . '</td><td>' . h($row['location_found']) . '</td><td>' . h(client_date($row['date_found'])) . '</td><td><span class="pill pill--' . h($row['status']) . '">' . h(admin_label($row['status'])) . '</span></td><td><button class="btn btn-ghost" type="button" data-open-detail="found-' . $id . '">Open</button></td></tr>';
+        $rows .= '<tr><td>' . dashboard_photo_preview($photos, (string) $row['item_name']) . '</td><td>' . h((string) $row['public_code']) . '</td><td><strong>' . h($row['item_name']) . '</strong></td><td>' . h($row['category']) . '</td><td>' . h($row['location_found']) . '</td><td>' . h(client_date($row['date_found'])) . '</td><td><span class="pill pill--' . h($row['status']) . '">' . h(admin_label($row['status'])) . '</span></td><td><button class="btn btn-ghost" type="button" data-open-detail="found-' . $id . '">Open</button></td></tr>';
         $delete = (int) $row['claim_count'] === 0
             ? '<form method="post" action="../database/admin/actions.php" data-client-ajax onsubmit="return confirm(\'Delete this found item?\')">' . csrf_field() . '<input type="hidden" name="action" value="delete_found"><input type="hidden" name="found_id" value="' . $id . '"><input type="hidden" name="redirect" value="admin-found-items.php"><button class="btn btn-danger" type="submit">Delete</button></form>'
             : '<p class="muted">This item has a claim, so it stays on file.</p>';
@@ -179,7 +194,7 @@ function admin_view_found(array $data): string {
             . client_photo_gallery($photos, $row['item_name'])             . '<form class="stack-form" method="post" action="../database/admin/actions.php" data-client-ajax enctype="multipart/form-data">' . csrf_field()
             . '<input type="hidden" name="action" value="update_found"><input type="hidden" name="found_id" value="' . $id . '"><input type="hidden" name="redirect" value="admin-found-items.php">'
             . '<label class="filter-field">Item<input name="item_name" value="' . h($row['item_name']) . '" required></label>'
-            . '<label class="filter-field">Category<select name="category">' . admin_options(CLIENT_CATEGORIES, $row['category']) . '</select></label>'
+            . '<label class="filter-field">Category<select name="category" required>' . $categoryOptions . '</select></label>'
             . '<label class="filter-field">Location<input name="location" value="' . h($row['location_found']) . '" required></label>'
             . '<label class="filter-field">Date found<input type="date" name="date_found" value="' . h(substr((string) $row['date_found'], 0, 10)) . '" required></label>'
             . '<label class="filter-field">Status<select name="status">' . admin_options(ADMIN_FOUND_STATUSES, $row['status'], true) . '</select></label>'
@@ -189,8 +204,8 @@ function admin_view_found(array $data): string {
     }
     return admin_intro('Found Items', 'Inventory logged by the security office.', '<a class="btn btn-primary" href="admin-log-found.php">Log found item</a>')
         . admin_filter('admin-found-items.php', $filters, ADMIN_FOUND_STATUSES)
-        . '<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Code</th><th>Item</th><th>Category</th><th>Location</th><th>Date found</th><th>Status</th><th></th></tr></thead><tbody>'
-        . ($rows ?: '<tr><td colspan="7" class="empty">No found items match these filters.</td></tr>')
+        . '<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Photo</th><th>Code</th><th>Item</th><th>Category</th><th>Location</th><th>Date found</th><th>Status</th><th></th></tr></thead><tbody>'
+        . ($rows ?: '<tr><td colspan="8" class="empty">No found items match these filters.</td></tr>')
         . '</tbody></table></div>' . admin_pager('admin-found-items.php', $filters, $data['pages'], $filters['page']) . $details;
 }
 
@@ -199,7 +214,7 @@ function admin_view_log(array $data): string {
         . '<form class="panel stack-form" method="post" action="../database/admin/actions.php" data-client-ajax enctype="multipart/form-data">' . csrf_field()
         . '<input type="hidden" name="action" value="create_found"><input type="hidden" name="redirect" value="admin-found-items.php">'
         . '<label class="filter-field">Item name<input name="item_name" required maxlength="150"></label>'
-        . '<label class="filter-field">Category<select name="category" required>' . admin_options(CLIENT_CATEGORIES, '') . '</select></label>'
+        . '<label class="filter-field">Category<select name="category" required><option value="" disabled selected>Select a category...</option>' . admin_options(ITEM_CATEGORY_OPTIONS, '') . '</select></label>'
         . '<label class="filter-field">Location found<input name="location" required maxlength="150"></label>'
         . '<label class="filter-field">Date found<input type="date" name="date_found" required max="' . h(date('Y-m-d')) . '"></label>'
         . '<label class="filter-field">Public summary<textarea name="public_summary" maxlength="500" placeholder="What other students may see"></textarea></label>'
@@ -258,7 +273,7 @@ function admin_view_claims(array $data): string {
         $rows .= '<tr><td>' . h((string) $row['public_code']) . '</td><td><strong>' . h($row['item_name']) . '</strong></td><td>' . h($row['full_name']) . '<br><span class="muted">' . h((string) $row['student_id']) . '</span></td><td>' . h(client_date($row['created_at'])) . '</td><td><span class="pill pill--' . h($row['status']) . '">' . h(admin_label($row['status'])) . '</span></td><td><button class="btn btn-ghost" type="button" data-open-detail="claim-' . $id . '">Review</button></td></tr>';
         $actions = '';
         if (in_array($row['status'], ['pending', 'manual_review'], true)) {
-            $actions = '<form method="post" action="../database/admin/actions.php" data-client-ajax>' . csrf_field() . '<input type="hidden" name="action" value="approve_claim"><input type="hidden" name="claim_id" value="' . $id . '"><button class="btn btn-primary" type="submit">Approve</button></form>';
+            $actions = '<button class="btn btn-primary" type="button" data-open-pickup-location data-claim-id="' . $id . '" data-approval-endpoint="../database/admin/actions.php" data-approval-action="approve_claim" data-approval-redirect="admin-claims.php" data-approval-ajax="true">Approve</button>';
             if ($row['status'] === 'pending') {
                 $actions .= '<form method="post" action="../database/admin/actions.php" data-client-ajax>' . csrf_field() . '<input type="hidden" name="action" value="request_claim_info"><input type="hidden" name="claim_id" value="' . $id . '"><button class="btn btn-ghost" type="submit">Request information</button></form>';
             }
@@ -438,7 +453,9 @@ function admin_view_settings(array $data): string {
     }
     return admin_intro('Settings', 'Account security for the signed-in admin or security account.')
         . '<section class="panel" id="account"><h2>Your profile</h2><p><strong>' . h($user['full_name']) . '</strong></p><p class="muted">' . h($user['email']) . ' · ' . h(ucfirst((string) $user['role'])) . '</p></section>'
-        . '<section class="panel" id="security"><h2>Change password</h2><form id="change-password-form" class="stack-form"><label class="filter-field">Current password<input type="password" name="current_password" autocomplete="current-password" required></label><label class="filter-field">New password<input type="password" name="password" minlength="8" autocomplete="new-password" required></label><label class="filter-field">Confirm new password<input type="password" name="confirm_password" minlength="8" autocomplete="new-password" required></label><button class="btn btn-primary" type="submit">Update password</button><p class="settings-feedback" id="password-feedback" role="status"></p></form></section>'
+        . '<section class="panel" id="security"><h2>Change password</h2><form id="change-password-form" class="stack-form"><label class="filter-field"><span>New password</span><input type="password" name="password" minlength="8" autocomplete="new-password" required></label><label class="filter-field"><span>Confirm new password</span><input type="password" name="confirm_password" minlength="8" autocomplete="new-password" required></label>'
+        . (!empty($user['totp_enabled']) ? '<label class="filter-field"><span>Authenticator code</span><input type="text" name="totp_code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required></label>' : '<label class="filter-field"><span>Current password</span><input type="password" name="current_password" autocomplete="current-password" required></label>')
+        . '<button class="btn btn-primary" type="submit">Update password</button><p class="settings-feedback" id="password-feedback" role="status"></p></form></section>'
         . '<section class="panel"><h2>Authenticator setup</h2><form id="login-method-form" class="stack-form"><fieldset><legend>Which code should appear first at sign-in?</legend><label class="pref-row"><span>Email code</span><input type="radio" name="login_method" value="email"' . ($loginMethod === 'email' ? ' checked' : '') . '></label><label class="pref-row"><span>Authenticator app</span><input type="radio" name="login_method" value="totp"' . ($loginMethod === 'totp' ? ' checked' : '') . '></label></fieldset><p id="login-method-note"' . ($loginMethod === 'totp' ? '' : ' hidden') . '>' . h($note) . '</p><button class="btn btn-primary" type="submit">Save sign-in method</button><p class="settings-feedback" id="login-method-feedback" role="status"></p></form>'
         . '<div class="settings-totp-status' . (!empty($user['totp_enabled']) ? ' is-enabled' : '') . '" id="totp-status"><strong>' . (!empty($user['totp_enabled']) ? 'Authenticator enabled' : 'Authenticator not set up') . '</strong><span>' . (!empty($user['totp_enabled']) ? 'Your account has a verified authenticator secret.' : 'Generate a secret, then confirm a current code.') . '</span></div>'
         . '<button type="button" class="btn btn-ghost" id="totp-start-btn"' . (!empty($user['totp_enabled']) ? ' hidden' : '') . '>Generate setup key</button>'

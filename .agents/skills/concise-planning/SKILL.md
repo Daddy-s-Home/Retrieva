@@ -7,8 +7,8 @@ description: "Use for coding plans, feature planning, architecture sequencing, m
 
 ## Workflow
 
-1. Scan the repository structure, README, relevant configuration, and nearby implementations.
-2. Identify framework, runtime, database, test, and compatibility constraints.
+1. Scan the repository structure, `README.md`, relevant configuration, and nearby implementations.
+2. Identify PHP, MySQL/MariaDB, Apache/XAMPP, and compatibility constraints.
 3. Make reasonable assumptions for non-blocking details.
 4. Ask at most two questions only when an answer blocks implementation.
 5. Produce a verb-first checklist with discovery, implementation, validation, and rollback considerations.
@@ -30,9 +30,10 @@ description: "Use for coding plans, feature planning, architecture sequencing, m
 - [ ] Validate...
 
 ## Validation
-- [ ] Targeted tests
-- [ ] Regression checks
+- [ ] Targeted checks (`php -l`, SQL, browser/API verification)
+- [ ] Regression checks (admin and client shells)
 - [ ] Migration or deployment safety where applicable
 ```
 
 Source: adapted from the Antigravity [concise-planning skill](https://github.com/benjaminasterA/antigravity-awesome-skills/blob/main/skills/concise-planning/SKILL.md).
+

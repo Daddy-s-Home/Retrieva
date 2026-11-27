@@ -70,7 +70,6 @@ function settings_status_class(string $status): string {
       <article class="card settings-card">
         <div class="settings-card__heading"><div><span class="settings-eyebrow">Security</span><h2>Change password</h2></div><span class="settings-card__icon">🔐</span></div>
         <form id="change-password-form" class="settings-form">
-          <label class="field"><span>Current password</span><input type="password" name="current_password" autocomplete="current-password" required></label>
           <label class="field"><span>New password</span><input type="password" id="new-password-input" name="password" minlength="8" autocomplete="new-password" required></label>
           <ul class="pw-criteria" id="pw-criteria" aria-live="polite">
             <li data-rule="length"><span class="pw-icon" aria-hidden="true">✕</span> At least 8 characters</li>
@@ -80,6 +79,11 @@ function settings_status_class(string $status): string {
             <li data-rule="special"><span class="pw-icon" aria-hidden="true">✕</span> At least 1 special character (!@#$%…)</li>
           </ul>
           <label class="field"><span>Confirm new password</span><input type="password" name="confirm_password" minlength="8" autocomplete="new-password" required></label>
+          <?php if (!empty($user['totp_enabled'])): ?>
+          <label class="field"><span>Authenticator code</span><input type="text" name="totp_code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required></label>
+          <?php else: ?>
+          <label class="field"><span>Current password</span><input type="password" name="current_password" autocomplete="current-password" required></label>
+          <?php endif; ?>
           <button type="submit" class="btn btn-primary">Update password</button><p class="settings-feedback" id="password-feedback" role="status"></p>
         </form>
       </article>

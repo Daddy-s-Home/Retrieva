@@ -36,7 +36,8 @@ function bindClientSettings() {
       if (button) button.disabled = true;
       try {
         const body = { password: password, confirm_password: confirmPassword };
-        if (fields.has('current_password')) body.current_password = fields.get('current_password');
+        if (fields.has('totp_code')) body.totp_code = String(fields.get('totp_code') || '').trim();
+        else if (fields.has('current_password')) body.current_password = fields.get('current_password');
         const response = await fetch(url, {
           method: 'POST',
           credentials: 'same-origin',

@@ -15,7 +15,7 @@ if ($pendingNotif) {
 }
 ?>
 <header class="topbar">
-  <button class="topbar__menu-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">☰</button>
+  <button class="topbar__menu-toggle" id="sidebar-toggle" type="button" aria-controls="dashboard-sidebar" aria-expanded="false" aria-label="Open navigation menu">☰</button>
 
   <?php if (($currentPage ?? '') === 'dashboard'): ?>
   <div class="topbar__search" role="search">

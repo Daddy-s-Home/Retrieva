@@ -17,12 +17,12 @@ Maintain `.agents/memory/PROJECT_MEMORY.md`.
 
 ## Record
 
-- Project purpose and runtime versions (native PHP >= 8.0, XAMPP, MySQL/MariaDB)
-- Frontend conventions and design decisions
-- Native PHP architecture conventions (no Laravel)
-- MySQL schema (`retrieva_db`) and SQL file state
+- Project purpose and runtime versions (PHP, MariaDB/MySQL, XAMPP)
+- Frontend conventions and `assets/theme.css` design decisions
+- PHP monolith architecture conventions (`auth/`, `dashboard/`, `database/`)
+- MySQL/MariaDB schema ownership and SQL artifact state
 - Security and RBAC constraints
-- Repeated test, lint (`php -l`), or format commands
+- Repeated test or validation commands
 - Known issues and their confirmed root causes
 - Completed work and incomplete follow-up
 - Architectural decisions and rejected alternatives
@@ -49,3 +49,4 @@ Use timestamped, evidence-based entries:
 Remove or mark outdated entries instead of silently contradicting them.
 
 Source: based on the Antigravity [memory-systems skill](https://github.com/benjaminasterA/antigravity-awesome-skills/blob/main/skills/memory-systems/SKILL.md).
+

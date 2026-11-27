@@ -23,10 +23,11 @@ function nav_item(string $href, string $page, string $icon, string $label, array
     echo '</a>';
 }
 ?>
-<aside class="sidebar">
+<aside class="sidebar" id="dashboard-sidebar">
   <div class="sidebar__brand">
-    <img src="../assets/icons/logo.svg" alt="" width="30" height="30">
+    <img src="../assets/icons/logo.png" alt="" width="30" height="30">
     <span>Retrieva</span>
+    <button class="sidebar__close" id="sidebar-close" type="button" aria-controls="dashboard-sidebar" aria-label="Close navigation menu">×</button>
   </div>
 
   <nav class="sidebar__nav">

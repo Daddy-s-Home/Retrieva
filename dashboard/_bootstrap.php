@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../database/db.php';
+require_once __DIR__ . '/../database/category_helper.php';
 require_once __DIR__ . '/rbac.php';
 
 // --- Pusher Configuration ---

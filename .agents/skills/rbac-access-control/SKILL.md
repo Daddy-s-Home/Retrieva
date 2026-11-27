@@ -1,42 +1,39 @@
 ---
 name: rbac-access-control
-description: "Use for Retrieva RBAC authorization across admin, security, professor, and student roles, sidebar visibility, endpoint guards, record ownership, and authorization checks."
+description: "Use for Retrieva's admin, security, professor, and student authorization, shell separation, record ownership, privacy masking, route protection, and authorization test matrices."
 ---
 
 # RBAC Access Control
 
-## Roles (`database/schema.sql` & `dashboard/rbac.php`)
+## Roles (`dashboard/rbac.php`)
 
-Retrieva defines four roles in `users.role`:
-
-- **Admin side (`RETRIEVA_ADMIN_ROLES = ['admin', 'security']`)**:
-  - `admin`: Full system administration, found/lost item management, claim verification, pickup oversight, and user/audit management.
-  - `security`: Campus Security Office staff — logs found items, reviews pending verifications/claims, and scans/verifies pickup QR codes.
-- **Client side (`RETRIEVA_CLIENT_ROLES = ['professor', 'student']`)**:
-  - `professor`: Can report lost items, search/view eligible listings, submit zero-knowledge claims, and manage own profile/TOTP settings.
-  - `student`: Same client-side capabilities as `professor`, plus `student_id` onboarding (`database/save_student_id.php`).
-
-## Server-Side Helpers
-
-- **View & Navigation (`dashboard/rbac.php`)**:
-  - `role_can(string $role, array $allowedRoles): bool`
-  - `role_is_admin_side(string $role): bool`
-  - `role_label(string $role): string`
-  - Render sidebar links and gated UI conditionally in PHP so disallowed links are never sent to the browser.
-- **Endpoint Guards (`database/db.php`)**:
-  - `require_login(): array` — returns `401` JSON if `$_SESSION['user_id']` is missing.
-  - `require_role(array $allowed_roles): array` — returns `403` JSON if `$_SESSION['role']` is not in `$allowed_roles`.
+- **Admin (`admin`)**: Full administrative operations, user management, lost reports, found items, matching center, claims, QR pickup verification, returned items, reports & analytics, audit logs, and system settings.
+- **Security (`security`)**: Staff/security operational workflows within `dashboard/admin/page.php` (found-item logging, matching, claim verification, QR pickup verification, returned items), subject to `rbac.php` restrictions.
+- **Professor (`professor`)** & **Student (`student`)**: Client-side workflows within `dashboard/client/page.php` (browsing public/privacy-masked lost & found items, submitting own lost reports, submitting/tracking own claims, viewing QR pickup codes for approved claims, notifications, and personal settings).
 
 ## Authorization Rules
 
-- Every endpoint in `database/` and every protected page in `dashboard/` must enforce `require_login()` / `require_role()` server-side.
-- Prevent IDOR: for client roles (`professor`, `student`), verify record ownership (`reported_by`, `claimant_id`, `user_id`) before reading or mutating records.
-- Do not rely on hidden UI controls or client-side JavaScript role checks.
-- Verify `users.status === 'active'` (reject `'blocked'` accounts).
+Every page, AJAX endpoint, export, file view, and database action needs server-side authorization via `database/db.php` (`require_login()`, `require_role()`, `require_login_page()`, `require_role_page()`) and `dashboard/_bootstrap.php`.
+
+Authorize with:
+
+- authenticated session user (`$_SESSION`)
+- role (`admin`, `security`, `professor`, `student`)
+- record ownership (e.g., `lost_items`, `claims`, `notifications` belonging to the current user on client endpoints)
+- item/claim lifecycle state (e.g., only approved claims expose pickup QR tokens)
+- requested action
+
+## Visibility & Privacy
+
+- Keep Admin/Security (`dashboard/admin/`) and Client (`dashboard/client/`) experiences strictly distinct.
+- Public/client found-item browsing views must preserve privacy masking and hide sensitive/identifying fields meant for claim verification.
+- Prevent IDOR by checking ownership or admin/security role on every record ID lookup, edit, or download.
+- Never rely on hidden UI controls or client-side JavaScript role checks alone.
 
 ## Test Matrix
 
-- Test unauthenticated access (expect redirect to login or `401`).
-- Test `student` / `professor` accessing `admin` / `security` endpoints (expect `403`).
-- Test `student` / `professor` accessing another user's lost item or claim (expect `403` / not found).
-- Test `security` and `admin` flows across found items, claim reviews, and QR pickups.
+For each role (`admin`, `security`, `professor`, `student`) and unauthenticated requests:
+- Test access to `dashboard/admin/` vs `dashboard/client/` pages and `database/admin/` vs `database/client/` endpoints.
+- Test own vs another user's `lost_items`, `claims`, `notifications`, and `pickups`.
+- Test read, create, update, approve/reject, QR verify, export, and delete actions.
+

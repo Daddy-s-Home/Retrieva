@@ -276,10 +276,8 @@ function admin_dashboard_data(): array {
         $foundSeries[] = client_count('SELECT COUNT(*) FROM found_items WHERE date_found = ?', [$day]);
         $lostSeries[] = client_count('SELECT COUNT(*) FROM lost_items WHERE date_lost = ?', [$day]);
     }
-    $categories = [];
-    foreach ($db->query('SELECT category, COUNT(*) AS total FROM found_items GROUP BY category ORDER BY total DESC')->fetchAll() as $row) {
-        $categories[] = ['label' => (string) $row['category'], 'total' => (int) $row['total']];
-    }
+    $categories = dashboard_category_rows($db, 'found_items');
+    $lostCategories = dashboard_category_rows($db, 'lost_items');
     $locations = [];
     foreach ($db->query('SELECT location_found AS label, COUNT(*) AS total FROM found_items GROUP BY location_found ORDER BY total DESC LIMIT 6')->fetchAll() as $row) {
         $locations[] = ['label' => (string) $row['label'], 'total' => (int) $row['total']];
@@ -291,7 +289,14 @@ function admin_dashboard_data(): array {
             ['purple', 'shield', (string) $pending, 'Pending claims', 'Waiting for review', 'flat'],
             ['green', 'check', (string) $returned, 'Returned', 'Verified pickups and returned items', 'flat'],
         ],
-        'chart' => ['days' => $days, 'found' => $foundSeries, 'lost' => $lostSeries, 'categories' => $categories, 'locations' => $locations],
+        'chart' => [
+            'days' => $days,
+            'found' => $foundSeries,
+            'lost' => $lostSeries,
+            'categories' => $categories,
+            'categories_lost' => $lostCategories,
+            'locations' => $locations,
+        ],
         'recent_found' => admin_rows('SELECT id, public_code, item_name, category, location_found, date_found, status, photo_path FROM found_items ORDER BY created_at DESC LIMIT 5'),
         'pending_claims' => admin_rows(
             "SELECT c.id, c.public_code, c.status, c.created_at, f.item_name, u.full_name

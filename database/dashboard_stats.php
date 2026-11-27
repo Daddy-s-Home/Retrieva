@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/category_helper.php';
 require_once __DIR__ . '/../dashboard/rbac.php';
 
 $session = require_login();
@@ -56,13 +57,10 @@ $pendingCount = $isAdminSide
     ? (int) $db->query("SELECT COUNT(*) FROM claims WHERE status IN ('pending', 'manual_review')")->fetchColumn()
     : 0;
 
-$categories = ['Electronics', 'Clothing', 'IDs & Cards', 'Accessories', 'Books & Papers', 'Others'];
-$categoryCounts = array_fill_keys($categories, 0);
-foreach ($db->query('SELECT category, COUNT(*) AS total FROM found_items GROUP BY category')->fetchAll() as $row) {
-    if (isset($categoryCounts[$row['category']])) {
-        $categoryCounts[$row['category']] = (int) $row['total'];
-    }
-}
+$categoryData = [
+    'found' => $isAdminSide ? dashboard_category_rows($db, 'found_items') : [],
+    'lost' => dashboard_category_rows($db, 'lost_items'),
+];
 
 $days = [];
 $foundSeries = [];
@@ -88,7 +86,7 @@ json_out([
     'itemsReturned'  => $itemsReturned,
     'pendingCount'   => $pendingCount,
     'recentFound'    => $recentFound,
-    'categoryCounts' => $categoryCounts,
+    'categoryData'   => $categoryData,
     'days'           => $days,
     'foundSeries'    => $foundSeries,
     'lostSeries'     => $lostSeries,

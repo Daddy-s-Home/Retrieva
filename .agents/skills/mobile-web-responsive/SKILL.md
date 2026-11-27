@@ -1,23 +1,23 @@
 ---
 name: mobile-web-responsive
-description: "Use for responsive mobile and tablet web design, phone and tablet layouts, touch targets, viewport testing, CSS breakpoints, mobile navigation, reflow, accessibility, and performance across desktops, laptops, tablets, and phones."
+description: "Use for responsive mobile and tablet web design in Retrieva, phone and tablet layouts, touch targets, viewport testing, CSS breakpoints, mobile navigation, reflow, accessibility, and performance."
 ---
 
 # Mobile and Tablet Web Responsive Design
 
 ## Scope
 
-Use this skill for Retrieva browser pages (`auth/` and `dashboard/`) that must work on desktop, laptop, tablet, and mobile devices.
+Use this skill for Retrieva browser views (`auth/`, `dashboard/admin/`, `dashboard/client/`) that must work on desktop, laptop, tablet, and mobile devices.
 
 ## Responsive Workflow
 
-1. Inspect existing PHP views, `assets/theme.css`, `auth/styles.css`, `dashboard/styles.css`, `dashboard/settings.css`, and `dashboard/components/`.
+1. Inspect existing PHP-rendered HTML views, `assets/theme.css`, `dashboard/*.js`, components, breakpoints, and layout containers.
 2. Test at desktop, laptop, tablet portrait/landscape, and phone portrait/landscape widths.
 3. Start with the smallest usable layout, then progressively add density for wider screens.
-4. Preserve content order, keyboard order, form submission, navigation, and RBAC behavior at every width.
+4. Preserve content order, keyboard order, form submission, navigation, and authorization behavior at every width.
 5. Use horizontal reflow or controlled overflow only where a table genuinely requires it.
 6. Add loading, empty, validation, permission, success, and error states for each viewport.
-7. Verify no clipped controls, inaccessible menus, overlapping text, or unusable forms.
+7. Verify that the final implementation has no clipped controls, inaccessible menus, overlapping text, or unusable forms.
 
 ## Required Viewport Checks
 
@@ -28,17 +28,52 @@ Use this skill for Retrieva browser pages (`auth/` and `dashboard/`) that must w
 - 1366px laptop
 - 1920px desktop
 
-## Layout, Touch, and Navigation Rules
+## Layout Rules
 
-- Use CSS Grid and Flexbox intentionally; set `min-width: 0` on grid/flex children containing long text or tables.
-- Avoid fixed heights that clip content and avoid permanently hidden desktop-only actions.
-- Use at least ~44px by 44px touch targets for primary controls with adequate spacing.
-- Keep focus visible for keyboard users; do not disable browser zoom.
-- Ensure sidebar/drawer navigation, modals, and dropdowns close predictably and remain keyboard accessible.
+- Use CSS Grid and Flexbox intentionally.
+- Use `min-width: 0` on grid or flex children that contain long text, tables, item titles, or location names.
+- Avoid fixed heights that clip content.
+- Avoid permanently hidden desktop-only actions.
+- Collapse secondary navigation, filters, toolbars, or details progressively without removing functionality.
+- Tables may become cards, scroll containers, grouped rows, or detail drawers, but must retain labels and actions.
+
+## Touch and Input
+
+- Use at least approximately 44px by 44px touch targets for primary controls.
+- Keep spacing between adjacent actions; separate destructive actions from primary actions.
+- Do not rely on hover, right-click, small text, or gesture-only controls.
+- Keep focus visible for keyboard users and large focus targets for touch users.
+- Prevent zoom failures; avoid disabling browser zoom.
+
+## Mobile Navigation
+
+- Use clear back, close, menu, and section-navigation behavior for the collapsible sidebar and detail drawers.
+- Keep the current page and role context visible.
+- Ensure menus, modals, and drawers are keyboard accessible and close predictably.
+- Do not hide essential report, claim, QR pickup, approval, or logout actions behind decorative menus.
 
 ## Retrieva Module Considerations
 
-- **Auth & TOTP (`auth/login.php`, `auth/totp.php`, `auth/forgot-password.php`)**: Keep forms, Google sign-in button, and 6-digit TOTP inputs centered and usable without horizontal scroll.
-- **Dashboard & Item Tables (`found-items.php`, `lost-items.php`, `claims.php`, `pending-verifications.php`)**: Tables may become cards or scroll containers while retaining labels and action buttons.
-- **Claim Challenge & QR Pickup Modals**: Ensure challenge questions, answers, and QR codes scale cleanly on 360px screens.
-- **Settings (`settings.php`)**: Keep profile, password, student ID, and TOTP setup sections stacked cleanly on narrow viewports.
+- Dashboards: summarize key KPIs first; adapt charts and tables cleanly for narrow screens.
+- Lost Reports & Found Items: keep item cards, status pills, filters, and detail drawers readable without horizontal page overflow.
+- Matching Center & Claims: keep side-by-side comparisons and verification checklists legible by stacking on small viewports.
+- QR Pickup Verification: keep scanner viewport, pickup queue, and confirm-pickup controls accessible on mobile/tablet.
+- My Reports & My Claims: ensure progress steppers and pickup QR displays scale cleanly.
+- Audit Logs & Reports: use responsive filters and expandable detail drawers rather than unbounded horizontal tables.
+
+## Validation
+
+Before completion, test:
+
+- No horizontal page overflow
+- Readable text without zooming
+- All controls reachable by touch and keyboard
+- Menus, drawers, modals, dropdowns, pagination, uploads, and forms work
+- Tables retain labels and actions
+- Images, charts, and QR codes reflow or scale correctly
+- Existing desktop behavior is not regressed
+- Reduced-motion and zoom settings are respected
+
+Inspired by the Antigravity `mobile-design` concept, adapted for responsive PHP/HTML/CSS/JavaScript web applications:
+https://github.com/benjaminasterA/antigravity-awesome-skills/blob/main/skills/mobile-design/SKILL.md
+

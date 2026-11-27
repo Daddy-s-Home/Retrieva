@@ -3,9 +3,12 @@ declare(strict_types=1);
 $currentPage = 'lost-items';
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/../database/notify_helper.php';
+require_once __DIR__ . '/../database/client/lib.php';
+require_once __DIR__ . '/components/photo-picker.php';
+require_once __DIR__ . '/components/item-photo-gallery.php';
 $db = get_db();
 $isAdminSide = role_is_admin_side($role);
-$categories = ['Electronics', 'Clothing', 'IDs & Cards', 'Accessories', 'Books & Papers', 'Others'];
+$categories = ITEM_CATEGORY_OPTIONS;
 $statuses = ['searching', 'matched', 'resolved'];
 $error = null; 
 $success = null;
@@ -51,6 +54,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $db->prepare('INSERT INTO lost_items (reported_by, item_name, category, other_category, last_seen_location, date_lost, description) VALUES (?, ?, ?, ?, ?, ?, ?)'); 
                 $stmt->execute([$user['id'], $name, $category, $category === 'Others' ? $otherCategory : null, $location ?: null, $dateLost, $description ?: null]); 
                 $newLostId = (int) $db->lastInsertId();
+                try {
+                    retrieva_save_photos('lost', $newLostId, $_POST);
+                } catch (Throwable $photoError) {
+                    retrieva_delete_photos('lost', $newLostId);
+                    $db->prepare('DELETE FROM lost_items WHERE id = ? AND reported_by = ?')->execute([$newLostId, $user['id']]);
+                    throw $photoError;
+                }
                 log_audit((int) $user['id'], 'lost_item_reported', $name); 
                 notify_roles(['admin', 'security'], 'report', 'New Lost Item Report', "{$user['full_name']} reported a lost {$category}: {$name}.", 'lost_item', $newLostId, 'info');
                 broadcast_event('private-staff', 'item:updated', ['entity' => 'lost_item', 'id' => $newLostId, 'status' => 'searching']);
@@ -97,6 +107,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif ($action === 'delete') {
                 $id = filter_var($_POST['item_id'] ?? null, FILTER_VALIDATE_INT); 
                 if (!$id) throw new InvalidArgumentException('Invalid report.');
+
+                $access = $db->prepare('SELECT reported_by, status FROM lost_items WHERE id = ?');
+                $access->execute([$id]);
+                $report = $access->fetch();
+                if (!$report || (!$isAdminSide && ((int) $report['reported_by'] !== (int) $user['id'] || $report['status'] !== 'searching'))) {
+                    throw new RuntimeException('Report was not found or cannot be deleted.');
+                }
+                retrieva_delete_photos('lost', (int) $id);
                 
                 if ($isAdminSide) { 
                     $stmt = $db->prepare('DELETE FROM lost_items WHERE id = ?'); 
@@ -131,6 +149,11 @@ if ($isAdminSide) {
     $stmt->execute([$user['id']]); 
     $items = $stmt->fetchAll(); 
 }
+$photoCovers = [];
+foreach ($items as $item) {
+    $photoCovers[(int) $item['id']] = (string) ($item['photo_path'] ?? '');
+}
+$itemPhotos = retrieva_photo_map('lost', $photoCovers);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -141,6 +164,8 @@ if ($isAdminSide) {
     <link rel="icon" type="image/svg+xml" href="../assets/icons/logo.svg">
     <link rel="stylesheet" href="../assets/theme.css">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="photo-picker.css">
+    <link rel="stylesheet" href="item-photo-gallery.css">
 </head>
 <body data-page="<?= h($currentPage) ?>" data-role="<?= h($role) ?>">
     
@@ -172,7 +197,7 @@ if ($isAdminSide) {
             <!-- Report Form Card -->
             <div class="section-title">Report a Lost Item</div>
             <div class="card">
-                <form method="post">
+                <form method="post" enctype="multipart/form-data">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="create">
                     
@@ -213,6 +238,7 @@ if ($isAdminSide) {
                         <textarea class="form-control" id="description" name="description" maxlength="1000" rows="3" placeholder="Provide identifying features (color, brand, serial number, contents)..."></textarea>
                     </div>
                     
+                    <?= dashboard_photo_picker([]) ?>
                     <button class="btn btn-primary" type="submit">Submit Report</button>
                 </form>
             </div>
@@ -225,6 +251,7 @@ if ($isAdminSide) {
                     <table class="data-table">
                         <thead>
                             <tr>
+                                <th>Photo</th>
                                 <th>Item</th>
                                 <th>Category</th>
                                 <th>Last Seen</th>
@@ -237,7 +264,7 @@ if ($isAdminSide) {
                         <tbody>
                             <?php if (!$items): ?>
                                 <tr class="empty-row">
-                                    <td colspan="7">
+                                    <td colspan="8">
                                         <div style="font-size: 1.75rem; margin-bottom: 0.4rem;">📭</div>
                                         No lost item reports found.
                                     </td>
@@ -246,6 +273,7 @@ if ($isAdminSide) {
                             
                             <?php foreach ($items as $item): ?>
                                 <tr>
+                                    <td><?= dashboard_photo_preview($itemPhotos[(int) $item['id']] ?? [], (string) $item['item_name']) ?></td>
                                     <td>
                                         <strong><?= h($item['item_name']) ?></strong>
                                         <?php if ($item['description']): ?>
@@ -254,7 +282,7 @@ if ($isAdminSide) {
                                     </td>
                                     <td>
                                         <?= h($item['category']) ?>
-                                        <?php if ($item['category'] === 'Others' && !empty($item['other_category'])): ?>
+                                        <?php if (in_array($item['category'], ['Other', 'Others'], true) && !empty($item['other_category'])): ?>
                                             <div><small><?= h($item['other_category']) ?></small></div>
                                         <?php endif; ?>
                                     </td>
@@ -299,6 +327,7 @@ if ($isAdminSide) {
             
         </main>
     </div>
+    <?= dashboard_photo_gallery_dialog() ?>
     <script>
       document.addEventListener('DOMContentLoaded', () => {
         const catSelect = document.getElementById('category');
@@ -354,5 +383,7 @@ if ($isAdminSide) {
       });
     </script>
     <script src="dashboard.js"></script>
+    <script src="photo-picker.js"></script>
+    <script src="item-photo-gallery.js"></script>
 </body>
 </html>
