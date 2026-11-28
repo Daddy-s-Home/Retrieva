@@ -7,6 +7,7 @@ require_once __DIR__ . '/_bootstrap.php';
 $db = get_db();
 $isAdminSide = role_is_admin_side($role);
 $userId = (int) $user['id'];
+$firstName = explode(' ', trim((string) $user['full_name']))[0] ?: 'there';
 
 /**
  * Security Helper: Smart Masking for Sensitive Item Names on Student Dashboard
@@ -115,7 +116,7 @@ for ($i = 6; $i >= 0; $i--) {
 
   <main class="page-content">
     <div class="page-header">
-      <h1>Good morning, <?= h(explode(' ', $user['full_name'])[0]) ?>! 👋</h1>
+      <h1 data-local-greeting data-first-name="<?= h($firstName) ?>">Welcome, <?= h($firstName) ?>!</h1>
       <p>Here's what's happening with Retrieva today.</p>
     </div>
 
@@ -202,7 +203,7 @@ for ($i = 6; $i >= 0; $i--) {
       <?php if ($isAdminSide): ?>
       <div class="card">
         <div class="card__header">
-          <h3>Pending Verifications</h3>
+          <h3><a href="pending-verifications.php" class="card__title-link">Pending Verifications</a></h3>
           <a href="pending-verifications.php" class="card__link">View All</a>
         </div>
         <div class="verif-row">

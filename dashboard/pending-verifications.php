@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+$currentPage = 'pending-verifications';
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/../database/notify_helper.php';
 require_once __DIR__ . '/../database/pickup_helper.php';

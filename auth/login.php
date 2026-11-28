@@ -1,17 +1,9 @@
 <?php
 declare(strict_types=1);
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
 require_once __DIR__ . '/../database/db.php';
 require_once __DIR__ . '/../database/recaptcha_config.php';
-
-$autoloader = __DIR__ . '/../vendor/autoload.php';
-if (file_exists($autoloader)) {
-    require_once $autoloader;
-}
+start_session();
 
 // Already signed in? Skip straight to the dashboard.
 if (session_id_present('user_id')) {
@@ -19,84 +11,8 @@ if (session_id_present('user_id')) {
     exit;
 }
 
-$login_error = '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
-    $password = $_POST['password'] ?? '';
-
-    if ($email && $password) {
-        if (function_exists('get_db_connection')) {
-            $pdo = get_db_connection();
-        } elseif (function_exists('getDB')) {
-            $pdo = getDB();
-        } elseif (isset($pdo) && $pdo instanceof PDO) {
-            // $pdo exists from db.php
-        } else {
-            $pdo = null;
-        }
-
-        if ($pdo) {
-            $stmt = $pdo->prepare('SELECT id, full_name, password_hash FROM users WHERE email = :email LIMIT 1');
-            $stmt->execute(['email' => $email]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($user && password_verify($password, $user['password_hash'])) {
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['user_name'] = $user['full_name'];
-
-                $userName = $user['full_name'] ?? 'A user';
-                $notifMessage = htmlspecialchars($userName) . ' signed in.';
-
-                // Store session notification as fallback for redirect
-                $_SESSION['pending_notif'] = [
-                    'title'   => 'User Activity',
-                    'message' => $notifMessage,
-                    'type'    => 'info'
-                ];
-
-                // Trigger Pusher Broadcast for real-time listeners
-                if (class_exists('Pusher\Pusher')) {
-                    try {
-                        $options = [
-                            'cluster' => 'eu',
-                            'useTLS'  => true,
-                            'curl_options' => [
-                                CURLOPT_SSL_VERIFYPEER => false
-                            ]
-                        ];
-
-                        $pusher = new Pusher\Pusher(
-                            '37ca687c653f5f52a830',
-                            '3490c00f428c3a676313',
-                            '2190919',
-                            $options
-                        );
-
-                        $payload = [
-                            'title'   => 'User Activity',
-                            'message' => $notifMessage,
-                            'type'    => 'info'
-                        ];
-
-                        $pusher->trigger('retrieva-global', 'user-login', $payload);
-                    } catch (\Throwable $e) {
-                        error_log('Pusher Exception: ' . $e->getMessage());
-                    }
-                }
-
-                header('Location: ../dashboard/index.php');
-                exit;
-            } else {
-                $login_error = 'Invalid email address or password.';
-            }
-        } else {
-            $login_error = 'Database connection failed.';
-        }
-    } else {
-        $login_error = 'Please fill in all required fields.';
-    }
-}
+$login_error = (string) ($_SESSION['login_error'] ?? '');
+unset($_SESSION['login_error']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -135,12 +51,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <p class="subtitle">Sign in to continue to your account</p>
 
       <?php if (!empty($login_error)): ?>
-        <div class="alert alert-danger" style="color: var(--c-danger, #d9534f); margin-bottom: 12px; font-size: 13px;">
-          <?= htmlspecialchars($login_error) ?>
+        <div class="alert alert-danger" role="alert" style="color: var(--c-danger, #d9534f); margin-bottom: 12px; font-size: 13px;">
+          <?= h($login_error) ?>
         </div>
       <?php endif; ?>
 
-      <form id="login-form" action="login.php" method="POST">
+      <form id="login-form" action="../database/login.php" method="POST">
         <div class="field">
           <label for="email">Email Address</label>
           <div class="input-wrap">

@@ -349,7 +349,7 @@ function admin_view_users(array $data): string {
     $details = '';
     foreach ($data['rows'] as $row) {
         $id = (int) $row['id'];
-        $rows .= '<tr><td><strong>' . h($row['full_name']) . '</strong><br><span class="muted">' . h($row['email']) . '</span></td><td>' . h($row['role']) . '</td><td>' . h((string) $row['student_id']) . '</td><td><span class="pill">' . h($row['status']) . '</span></td><td><button class="btn btn-ghost" type="button" data-open-detail="user-' . $id . '">Edit</button></td></tr>';
+        $rows .= '<tr><td><strong>' . h($row['full_name']) . '</strong><br><span class="muted">' . h($row['email']) . '</span></td><td>' . h($row['role']) . '</td><td>' . h((string) $row['student_id']) . '</td><td><span class="user-status user-status--' . h($row['status']) . '">' . h(ucfirst($row['status'])) . '</span></td><td><button class="btn btn-ghost" type="button" data-open-detail="user-' . $id . '">Edit</button></td></tr>';
         $details .= '<template id="detail-user-' . $id . '"><h2 id="drawer-title">' . h($row['full_name']) . '</h2>'
             . '<form class="stack-form" method="post" action="../database/admin/actions.php" data-client-ajax>' . csrf_field() . '<input type="hidden" name="action" value="update_user"><input type="hidden" name="user_id" value="' . $id . '">'
             . '<label class="filter-field">Name<input name="full_name" value="' . h($row['full_name']) . '" required></label>'
@@ -362,14 +362,20 @@ function admin_view_users(array $data): string {
             . '<form class="stack-form" method="post" action="../database/admin/actions.php" data-client-ajax>' . csrf_field() . '<input type="hidden" name="action" value="reset_user_password"><input type="hidden" name="user_id" value="' . $id . '">'
             . '<label class="filter-field">New password<input type="password" name="password" minlength="8" required></label>'
             . '<label class="filter-field">Confirm password<input type="password" name="confirm_password" minlength="8" required></label>'
-            . '<button class="btn btn-ghost" type="submit">Reset password</button></form></template>';
+            . '<button class="btn btn-ghost" type="submit">Reset password</button></form>';
+        if ($id !== (int) ($data['actor_id'] ?? 0) && $row['status'] !== 'inactive') {
+            $details .= '<form class="stack-form" method="post" action="../database/admin/actions.php" data-confirm-title="Deactivate account?" data-confirm="This will set this account to Inactive and prevent sign-in. Its reports and claims will be kept, and an admin can reactivate it later." data-confirm-btn="Mark inactive">'
+                . csrf_field() . '<input type="hidden" name="action" value="deactivate_user"><input type="hidden" name="user_id" value="' . $id . '">'
+                . '<p class="muted">Deletion is reversible: the account is marked inactive and its history is retained.</p><button class="btn btn-danger" type="submit">Delete account</button></form>';
+        }
+        $details .= '</template>';
     }
     return admin_intro('Users', 'Add accounts and update role, status, or password.')
         . '<section class="kpi-grid">' . $kpis . '</section>'
         . '<form class="panel stack-form" method="post" action="../database/admin/actions.php" data-client-ajax>' . csrf_field() . '<input type="hidden" name="action" value="create_user"><h2>Add account</h2>'
         . '<div class="form-grid"><label class="filter-field">Name<input name="full_name" required></label><label class="filter-field">UMak email<input type="email" name="email" required></label><label class="filter-field">Role<select name="role">' . admin_options(ADMIN_ROLES, 'student') . '</select></label><label class="filter-field">Status<select name="status">' . admin_options(ADMIN_USER_STATUSES, 'active', true) . '</select></label><label class="filter-field">Student ID<input name="student_id"></label><label class="filter-field">Program<input name="program_department"></label><label class="filter-field">Password<input type="password" name="password" minlength="8" required></label></div>'
         . '<button class="btn btn-primary" type="submit">Create account</button></form>'
-        . '<form class="filter-bar" method="get" action="admin-users.php" data-client-filter><label class="filter-field filter-field--search">Search<input type="search" name="q" value="' . h($filters['q']) . '"></label><label class="filter-field">Role<select name="status"><option value="">All</option>' . admin_options(ADMIN_ROLES, $filters['status']) . '</select></label><button class="btn btn-primary" type="submit">Apply</button></form>'
+        . '<form class="filter-bar" method="get" action="admin-users.php" data-client-filter><label class="filter-field filter-field--search">Search<input type="search" name="q" value="' . h($filters['q']) . '"></label><label class="filter-field">Role<select name="role"><option value="">All roles</option>' . admin_options(ADMIN_ROLES, $filters['role'], true) . '</select></label><label class="filter-field">Status<select name="status"><option value="">All statuses</option>' . admin_options(ADMIN_USER_STATUSES, $filters['status'], true) . '</select></label><button class="btn btn-primary" type="submit">Apply</button></form>'
         . '<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Person</th><th>Role</th><th>Student ID</th><th>Status</th><th></th></tr></thead><tbody>'
         . ($rows ?: '<tr><td colspan="5" class="empty">No accounts match these filters.</td></tr>') . '</tbody></table></div>'
         . admin_pager('admin-users.php', $filters, $data['pages'], $filters['page']) . $details;

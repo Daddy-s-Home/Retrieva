@@ -38,7 +38,7 @@ if ($pendingNotif) {
           <strong>Notifications</strong>
           <button id="notif-clear-btn" class="notif-dropdown__clear">Clear all</button>
         </div>
-        <div id="notif-list" class="notif-dropdown__list">
+        <div id="notif-list" class="notif-dropdown__list" aria-live="polite">
           <div class="notif-empty">No new notifications</div>
         </div>
       </div>

@@ -41,6 +41,7 @@ function nav_item(string $href, string $page, string $icon, string $label, array
     nav_item('pending-verifications.php', 'pending-verifications', '✅', 'Pending Verifications', ['admin','security'], $role, $currentPage, $pendingBadge > 0 ? (string) $pendingBadge : null);
     nav_item('pickup-verification.php', 'pickup-verification', '📷', 'QR Pickup Verification', ['admin','security'], $role, $currentPage);
     nav_item('reports.php', 'reports', '📊', 'Reports & Export', ['admin','security'], $role, $currentPage);
+    nav_item('admin-users.php', 'users', '👥', 'Users', ['admin'], $role, $currentPage);
     nav_item('audit-trail.php', 'audit-trail', '📜', 'Audit Trail', ['admin'], $role, $currentPage);
     ?>
   </nav>

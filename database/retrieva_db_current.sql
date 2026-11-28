@@ -685,7 +685,7 @@ CREATE TABLE `users` (
   `totp_secret` varchar(64) DEFAULT NULL,
   `totp_enabled` tinyint(1) NOT NULL DEFAULT 0,
   `login_method` enum('email','totp') NOT NULL DEFAULT 'email',
-  `status` enum('active','blocked') NOT NULL DEFAULT 'active',
+  `status` enum('active','blocked','inactive') NOT NULL DEFAULT 'active',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `failed_attempts` int(10) UNSIGNED DEFAULT 0,

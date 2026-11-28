@@ -481,12 +481,22 @@
   text-align: left;
   margin: 0 0 6px;
 }
+.totp-delivery-status {
+  min-height: 1.4em;
+  margin: 0 0 6px;
+  color: var(--c-text-muted);
+  font-size: 13px;
+}
 .totp-resend .text-link {
   background: none;
   border: 0;
   padding: 0;
   font: inherit;
   cursor: pointer;
+}
+.totp-resend .text-link:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 .totp-sync-note {
   text-align: center;

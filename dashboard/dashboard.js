@@ -26,6 +26,152 @@ function closeModal(overlayId) {
  * NOTIFICATION BELL & REAL-TIME SYSTEM (With Read State & Dynamic Time Ago)
  * ------------------------------------------------------------------------- */
 let unreadCount = 0;
+let notificationItems = [];
+let liveNotifications = [];
+let notificationLoadPromise = null;
+let notificationLoading = false;
+let notificationLoadError = '';
+let markReadAfterLoad = false;
+
+function notificationCacheKey() {
+  const userId = window.RETRIEVA_USER_ID ?? document.body?.dataset?.userId;
+  return userId === undefined || userId === null || userId === ''
+    ? ''
+    : `retrieva:notifications:v1:${userId}`;
+}
+
+function clearCachedNotifications() {
+  const key = notificationCacheKey();
+  if (!key) return;
+  try {
+    sessionStorage.removeItem(key);
+  } catch (error) {
+    console.warn('Saved notifications could not be cleared.', error);
+  }
+}
+
+function normalizeNotification(notification) {
+  if (!notification || typeof notification !== 'object'
+      || typeof notification.title !== 'string'
+      || typeof (notification.body ?? notification.message) !== 'string') {
+    return null;
+  }
+
+  return {
+    id: notification.id === undefined || notification.id === null || notification.id === ''
+      ? null
+      : String(notification.id),
+    category: typeof notification.category === 'string' ? notification.category : 'system',
+    title: notification.title,
+    body: notification.body ?? notification.message,
+    entity_type: notification.entity_type ?? null,
+    entity_id: notification.entity_id ?? null,
+    read_at: notification.read_at || null,
+    created_at: typeof notification.created_at === 'string' ? notification.created_at : new Date().toISOString(),
+    type: typeof notification.type === 'string' ? notification.type : '',
+  };
+}
+
+function readCachedNotifications() {
+  const key = notificationCacheKey();
+  if (!key) return [];
+  try {
+    const cached = JSON.parse(sessionStorage.getItem(key) || 'null');
+    return Array.isArray(cached?.notifications)
+      ? cached.notifications.map(normalizeNotification).filter(Boolean)
+      : [];
+  } catch (error) {
+    console.warn('Saved notifications could not be read.', error);
+    return [];
+  }
+}
+
+function cacheNotifications() {
+  const key = notificationCacheKey();
+  if (!key) return;
+  try {
+    sessionStorage.setItem(key, JSON.stringify({
+      notifications: notificationItems,
+      savedAt: Date.now(),
+    }));
+  } catch (error) {
+    console.warn('Notifications could not be saved for this tab.', error);
+  }
+}
+
+function mergeNotifications(...groups) {
+  const byId = new Map();
+  const withoutId = [];
+  groups.flat().forEach((value) => {
+    const item = normalizeNotification(value);
+    if (!item) return;
+    if (item.id === null) {
+      withoutId.push(item);
+    } else {
+      byId.set(item.id, item);
+    }
+  });
+  return [...byId.values(), ...withoutId]
+    .sort((a, b) => {
+      const aTime = new Date(a.created_at.replace(' ', 'T')).getTime();
+      const bTime = new Date(b.created_at.replace(' ', 'T')).getTime();
+      return (Number.isNaN(bTime) ? 0 : bTime) - (Number.isNaN(aTime) ? 0 : aTime);
+    })
+    .slice(0, 30);
+}
+
+function renderNotifications() {
+  const notifList = document.getElementById('notif-list');
+  if (notifList) {
+    notifList.replaceChildren();
+    if (notificationLoadError) {
+      const error = document.createElement('div');
+      error.className = 'notif-error';
+      error.setAttribute('role', 'status');
+      error.textContent = notificationItems.length
+        ? 'Could not refresh notifications. Showing saved results.'
+        : 'Notifications could not be loaded.';
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'notif-retry';
+      retry.dataset.retryNotifications = 'true';
+      retry.textContent = 'Retry';
+      error.appendChild(retry);
+      notifList.appendChild(error);
+    }
+
+    if (notificationItems.length === 0) {
+      if (!notificationLoadError) {
+        const empty = document.createElement('div');
+        empty.className = 'notif-empty';
+        empty.setAttribute('aria-live', 'polite');
+        empty.textContent = notificationLoading ? 'Loading notifications…' : 'No new notifications';
+        notifList.appendChild(empty);
+      }
+    } else {
+      notificationItems.forEach((notification) => {
+        const isUnread = !notification.read_at;
+        const type = notification.type || (notification.category === 'claim' ? 'warning' : 'info');
+        const item = document.createElement('div');
+        item.className = `notif-item ${isUnread ? 'notif-item--unread' : ''}`;
+        if (notification.id !== null) item.dataset.notificationId = notification.id;
+        item.dataset.timestamp = notification.created_at.replace(' ', 'T');
+        item.innerHTML = `
+          <div class="notif-item__icon">${getNotifIcon(type)}</div>
+          <div class="notif-item__content">
+            <strong>${escapeHtml(notification.title)}</strong>
+            <p>${escapeHtml(notification.body)}</p>
+            <small class="time-ago">${formatTimeAgo(item.dataset.timestamp)}</small>
+          </div>
+        `;
+        notifList.appendChild(item);
+      });
+    }
+  }
+
+  unreadCount = notificationItems.filter((notification) => !notification.read_at).length;
+  updateBadge();
+}
 
 function initNotifications() {
   const bellBtn = document.getElementById('notif-bell-btn');
@@ -35,10 +181,11 @@ function initNotifications() {
 
   if (!bellBtn || !dropdown) return;
 
-  // Load saved notifications on page startup
+  notificationItems = mergeNotifications(readCachedNotifications(), notificationItems);
+  notificationLoading = notificationItems.length === 0;
+  renderNotifications();
   loadStoredNotifications();
 
-  // Start periodic ticker to update "X minutes ago" dynamically
   setInterval(updateTimeAgoDisplay, 30000);
 
   bellBtn.addEventListener('click', (e) => {
@@ -52,10 +199,17 @@ function initNotifications() {
     // Mark notifications as read and clear badge when dropdown is opened
     if (isHidden && unreadCount > 0) {
       markAllAsRead();
+    } else if (isHidden && notificationLoading) {
+      markReadAfterLoad = true;
     }
   });
 
   dropdown.addEventListener('click', (e) => e.stopPropagation());
+  notifList?.addEventListener('click', (event) => {
+    if (event.target.closest('[data-retry-notifications]')) {
+      loadStoredNotifications();
+    }
+  });
 
   document.addEventListener('click', () => {
     dropdown.hidden = true;
@@ -63,97 +217,100 @@ function initNotifications() {
   });
 
   clearBtn?.addEventListener('click', async () => {
-    unreadCount = 0;
-    updateBadge();
-    if (notifList) {
-      notifList.innerHTML = '<div class="notif-empty">No new notifications</div>';
+    if (notificationLoadPromise) await notificationLoadPromise;
+    const previousItems = notificationItems;
+    notificationItems = [];
+    liveNotifications = [];
+    notificationLoadError = '';
+    cacheNotifications();
+    renderNotifications();
+
+    const result = await postJSON(`${API}/notifications.php`, { action: 'clear' });
+    if (!result.success) {
+      notificationItems = mergeNotifications(previousItems, liveNotifications);
+      notificationLoadError = result.message || 'Notifications could not be cleared.';
+      cacheNotifications();
+      renderNotifications();
+      showToast('Notifications not cleared', notificationLoadError, 'danger');
+      return;
     }
-    await postJSON(`${API}/notifications.php`, { action: 'clear' });
+    cacheNotifications();
   });
 }
 
-async function loadStoredNotifications() {
-  const notifList = document.getElementById('notif-list');
-  if (!notifList) return;
+function loadStoredNotifications() {
+  if (notificationLoadPromise) return notificationLoadPromise;
+  notificationLoading = notificationItems.length === 0;
+  notificationLoadError = '';
+  renderNotifications();
+  notificationLoadPromise = (async () => {
+    try {
+      const res = await fetch(`${API}/notifications.php`, {
+        credentials: 'same-origin',
+        cache: 'no-store',
+      });
+      if (!res.ok) throw new Error(`Notification request failed with status ${res.status}.`);
+      const data = await res.json();
+      if (!data.success || !Array.isArray(data.notifications)) {
+        throw new Error(data.message || 'The notification response was invalid.');
+      }
 
-  try {
-    const res = await fetch(`${API}/notifications.php`, { credentials: 'same-origin' });
-    const data = await res.json();
-    if (!data.success || !Array.isArray(data.notifications)) return;
-
-    if (data.notifications.length === 0) {
-      unreadCount = 0;
-      updateBadge();
-      return;
+      const stored = data.notifications.map(normalizeNotification).filter(Boolean);
+      notificationItems = mergeNotifications(stored, liveNotifications);
+      liveNotifications = [];
+      notificationLoadError = '';
+      cacheNotifications();
+    } catch (error) {
+      notificationLoadError = 'Could not refresh notifications. Try again.';
+      console.error('Notification refresh failed.', error);
+    } finally {
+      notificationLoading = false;
+      notificationLoadPromise = null;
+      renderNotifications();
+      const dropdown = document.getElementById('notif-dropdown');
+      if (markReadAfterLoad) {
+        const shouldMarkRead = dropdown && !dropdown.hidden && unreadCount > 0;
+        markReadAfterLoad = false;
+        if (shouldMarkRead) markAllAsRead();
+      }
     }
-
-    notifList.innerHTML = '';
-    unreadCount = 0;
-
-    data.notifications.forEach((notif) => {
-      const isUnread = !notif.read_at;
-      if (isUnread) unreadCount++;
-      const type = notif.category === 'claim' ? 'warning' : (notif.category === 'report' ? 'info' : 'info');
-      const item = document.createElement('div');
-      item.className = `notif-item ${isUnread ? 'notif-item--unread' : ''}`;
-      item.dataset.timestamp = notif.created_at ? notif.created_at.replace(' ', 'T') : new Date().toISOString();
-      item.innerHTML = `
-        <div class="notif-item__icon">${getNotifIcon(type)}</div>
-        <div class="notif-item__content">
-          <strong>${escapeHtml(notif.title)}</strong>
-          <p>${escapeHtml(notif.body)}</p>
-          <small class="time-ago">${formatTimeAgo(item.dataset.timestamp)}</small>
-        </div>
-      `;
-      notifList.appendChild(item);
-    });
-
-    updateBadge();
-  } catch {
-    // Keep existing empty state if offline
-  }
+  })();
+  return notificationLoadPromise;
 }
 
-function addNotification(title, message, type = 'info') {
-  const notifList = document.getElementById('notif-list');
-  const emptyState = notifList?.querySelector('.notif-empty');
-
-  if (emptyState) {
-    emptyState.remove();
-  }
-
-  unreadCount++;
-  updateBadge();
-
-  const timestamp = new Date().toISOString();
-  const item = document.createElement('div');
-  item.className = 'notif-item notif-item--unread';
-  item.dataset.timestamp = timestamp;
-  item.innerHTML = `
-    <div class="notif-item__icon">${getNotifIcon(type)}</div>
-    <div class="notif-item__content">
-      <strong>${escapeHtml(title)}</strong>
-      <p>${escapeHtml(message)}</p>
-      <small class="time-ago">Just now</small>
-    </div>
-  `;
-
-  notifList?.prepend(item);
+function addNotification(title, message, type = 'info', metadata = {}) {
+  const notification = normalizeNotification({
+    ...metadata,
+    title: String(title || 'Notification'),
+    message: String(message || ''),
+    type,
+    read_at: null,
+    created_at: new Date().toISOString(),
+  });
+  if (!notification) return;
+  liveNotifications = mergeNotifications(liveNotifications, [notification]);
+  notificationItems = mergeNotifications([notification], notificationItems);
+  notificationLoadError = '';
+  cacheNotifications();
+  renderNotifications();
   showToast(title, message, type);
 }
 
 async function markAllAsRead() {
-  unreadCount = 0;
-  updateBadge();
+  if (notificationLoadPromise) await notificationLoadPromise;
+  const readAt = new Date().toISOString();
+  notificationItems = notificationItems.map((notification) => ({ ...notification, read_at: readAt }));
+  liveNotifications = liveNotifications.map((notification) => ({ ...notification, read_at: readAt }));
+  cacheNotifications();
+  renderNotifications();
 
-  const notifList = document.getElementById('notif-list');
-  if (notifList) {
-    notifList.querySelectorAll('.notif-item--unread').forEach(el => {
-      el.classList.remove('notif-item--unread');
-    });
+  const result = await postJSON(`${API}/notifications.php`, { action: 'mark_read' });
+  if (!result.success) {
+    notificationLoadError = result.message || 'Notifications could not be marked as read.';
+    renderNotifications();
+    showToast('Notifications not updated', notificationLoadError, 'danger');
+    loadStoredNotifications();
   }
-
-  await postJSON(`${API}/notifications.php`, { action: 'mark_read' });
 }
 
 function formatTimeAgo(isoString) {
@@ -209,6 +366,39 @@ function updateBadge() {
   } else {
     badge.style.display = 'none';
   }
+}
+
+function updateDeviceLocalTime() {
+  const now = new Date();
+  const greeting = document.querySelector('[data-local-greeting]');
+  const date = document.querySelector('[data-local-date]');
+  const time = document.querySelector('[data-local-time]');
+
+  if (greeting) {
+    const hour = now.getHours();
+    const salutation = hour < 12 ? 'Good morning' : (hour < 17 ? 'Good afternoon' : 'Good evening');
+    greeting.textContent = `${salutation}, ${greeting.dataset.firstName || 'there'}! 👋`;
+  }
+  if (date) {
+    date.textContent = now.toLocaleDateString(undefined, {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  }
+  if (time) {
+    time.textContent = now.toLocaleTimeString(undefined, {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  }
+}
+
+function initDeviceLocalTime() {
+  updateDeviceLocalTime();
+  setInterval(updateDeviceLocalTime, 30000);
+  document.addEventListener('retrieva:paint', updateDeviceLocalTime);
 }
 
 function getNotifIcon(type) {
@@ -273,7 +463,8 @@ function initPusherNotifications() {
       addNotification(
         data.title || 'Notification',
         data.message || '',
-        data.type || 'info'
+        data.type || 'info',
+        data
       );
     });
     userChannel.bind('claim:updated', () => handleSyncEvent('claim:updated'));
@@ -435,6 +626,7 @@ function initUserMenu() {
 function initLogout() {
   document.getElementById('logout-btn')?.addEventListener('click', async () => {
     const r = await postJSON(`${API}/logout.php`);
+    clearCachedNotifications();
     window.location.href = r.redirect || '../auth/login.php';
   });
 }
@@ -578,7 +770,18 @@ function initConfirmModal() {
   const msgEl = document.getElementById('confirm-action-message');
   const cancelBtn = document.getElementById('confirm-action-cancel');
   const submitBtn = document.getElementById('confirm-action-submit');
-  if (!modal || !submitBtn) return;
+  if (!modal || !submitBtn) {
+    document.addEventListener('submit', (event) => {
+      const form = event.target.closest('form[data-confirm]');
+      if (!form || form.dataset.confirmed === '1') return;
+      if (!window.confirm(form.dataset.confirm || 'Are you sure you want to continue?')) {
+        event.preventDefault();
+        return;
+      }
+      form.dataset.confirmed = '1';
+    });
+    return;
+  }
 
   let pendingForm = null;
 
@@ -623,6 +826,7 @@ window.addNotification = addNotification;
 window.showToast = showToast;
 
 document.addEventListener('DOMContentLoaded', () => {
+  initDeviceLocalTime();
   initUserMenu();
   initLogout();
   initSidebarToggle();

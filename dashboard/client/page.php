@@ -19,7 +19,6 @@ $payload = client_module($clientModule, (int) $user['id'], $_GET);
 $flash = (string) ($_SESSION['client_flash'] ?? '');
 unset($_SESSION['client_flash']);
 $unread = client_count('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read_at IS NULL', [(int) $user['id']]);
-$now = new DateTime('now', new DateTimeZone('Asia/Manila'));
 $meta = client_asset_map()[$clientModule];
 $searchAction = $clientModule === 'dashboard' ? 'client-found-items.php' : $meta['page'];
 $searchModule = $clientModule === 'dashboard' ? 'found-items' : $clientModule;
@@ -104,8 +103,8 @@ $titles = [
         </div>
       </div>
       <div class="client-clock">
-        <span><?= h($now->format('l, M j, Y')) ?></span>
-        <strong><?= h($now->format('g:i A')) ?></strong>
+        <span data-local-date>Loading date…</span>
+        <strong data-local-time>--:--</strong>
       </div>
     </div>
   </header>

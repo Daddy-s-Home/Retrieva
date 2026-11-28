@@ -73,6 +73,7 @@ function notify_users(
         $category = 'system';
     }
 
+    $notificationIds = [];
     try {
         $db = get_db();
         $stmt = $db->prepare(
@@ -81,6 +82,7 @@ function notify_users(
         );
         foreach ($ids as $uid) {
             $stmt->execute([$uid, $category, mb_substr($title, 0, 180), $body, $entityType, $entityId]);
+            $notificationIds[$uid] = (int) $db->lastInsertId();
         }
     } catch (Throwable $e) {
         error_log('Notification DB insert failed: ' . $e->getMessage());
@@ -88,6 +90,7 @@ function notify_users(
 
     foreach ($ids as $uid) {
         broadcast_event("private-user-{$uid}", 'notification', [
+            'id'          => $notificationIds[$uid] ?? null,
             'category'    => $category,
             'title'       => $title,
             'message'     => $body,

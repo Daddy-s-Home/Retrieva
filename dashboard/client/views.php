@@ -216,7 +216,7 @@ function client_render(string $module, array $data): string {
 
 function client_view_dashboard(array $data): string {
     $k = $data['kpis'];
-    $html = '<header class="page-intro"><div><h1>' . h($data['greeting']) . ', ' . h($data['first_name']) . '</h1><p>Welcome to Retrieva. Report, search, and claim lost items easily.</p></div></header>';
+    $html = '<header class="page-intro"><div><h1 data-local-greeting data-first-name="' . h($data['first_name']) . '">Welcome, ' . h($data['first_name']) . '!</h1><p>Welcome to Retrieva. Report, search, and claim lost items easily.</p></div></header>';
     $html .= '<section class="kpi-grid">';
     $html .= client_kpi('blue', 'report', (string) $k['reports']['value'], 'My Lost Reports', $k['reports']['detail'], 'flat');
     $html .= client_kpi('gold', 'shield', (string) $k['claims']['value'], 'Active Claims', $k['claims']['detail'], 'flat');

@@ -11,12 +11,16 @@ if ($input === [] && str_contains((string) ($_SERVER['CONTENT_TYPE'] ?? ''), 'ap
     $decoded = json_decode(file_get_contents('php://input') ?: '', true);
     $input = is_array($decoded) ? $decoded : [];
 }
-$token = (string) ($input['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? ''));
-if (!verify_csrf($token)) {
+$token = $input['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+if (!is_string($token) || !verify_csrf($token)) {
     admin_finish(false, 'Your session expired. Please try again.', 400, (string) ($input['redirect'] ?? ''));
 }
 
 $action = (string) ($input['action'] ?? '');
+if (in_array($action, ['create_user', 'update_user', 'deactivate_user', 'reset_user_password'], true)) {
+    require_role(['admin']);
+}
+
 try {
     match ($action) {
         'update_lost' => admin_update_lost($actorId, $input),
@@ -35,6 +39,7 @@ try {
         'report_return_issue' => admin_return_issue($actorId, $input),
         'create_user' => admin_create_user($actorId, $input),
         'update_user' => admin_update_user($actorId, $input),
+        'deactivate_user' => admin_deactivate_user($actorId, $input),
         'reset_user_password' => admin_reset_password($actorId, $input),
         default => throw new InvalidArgumentException('That action is not available.'),
     };
@@ -95,6 +100,14 @@ function admin_id(array $input, string $key): int {
     $id = filter_var($input[$key] ?? null, FILTER_VALIDATE_INT);
     if (!$id || $id < 1) {
         throw new InvalidArgumentException('Choose a valid record.');
+    }
+    return (int) $id;
+}
+
+function admin_user_id(array $input): int {
+    $id = filter_var($input['user_id'] ?? null, FILTER_VALIDATE_INT);
+    if ($id === false || $id < 0) {
+        throw new InvalidArgumentException('Choose a valid account.');
     }
     return (int) $id;
 }
@@ -385,7 +398,7 @@ function admin_user_input(array $input, bool $requirePassword): array {
     $studentId = trim((string) ($input['student_id'] ?? ''));
     $program = trim((string) ($input['program_department'] ?? ''));
     $password = (string) ($input['password'] ?? '');
-    if ($name === '' || strlen($name) > 150 || !filter_var($email, FILTER_VALIDATE_EMAIL) || !str_ends_with($email, '@umak.edu.ph')) {
+    if ($name === '' || strlen($name) > 150 || strlen($email) > 150 || !filter_var($email, FILTER_VALIDATE_EMAIL) || !str_ends_with($email, '@umak.edu.ph')) {
         throw new InvalidArgumentException('Enter a name and a UMak email address.');
     }
     if (!in_array($role, ADMIN_ROLES, true) || !in_array($status, ADMIN_USER_STATUSES, true)) {
@@ -420,20 +433,23 @@ function admin_create_user(int $actorId, array $input): void {
     if ($studentId !== null && client_count('SELECT COUNT(*) FROM users WHERE student_id = ?', [$studentId]) > 0) {
         throw new RuntimeException('That student ID is already registered.');
     }
-    $stmt = get_db()->prepare(
+    $db = get_db();
+    $db->beginTransaction();
+    $stmt = $db->prepare(
         'INSERT INTO users (email, full_name, password_hash, password_is_set, role, auth_provider, student_id, program_department, email_verified, status)
          VALUES (?, ?, ?, 1, ?, \'local\', ?, ?, 1, ?)'
     );
     $stmt->execute([$email, $name, password_hash($password, PASSWORD_DEFAULT), $role, $studentId, $program, $status]);
     log_audit($actorId, 'user_created', $email);
+    $db->commit();
     admin_finish(true, 'Account created.', 200, 'admin-users.php');
 }
 
 function admin_update_user(int $actorId, array $input): void {
-    $id = admin_id($input, 'user_id');
+    $id = admin_user_id($input);
     [$name, $email, $role, $status, $studentId, $program] = admin_user_input($input, false);
-    if ($id === $actorId && $status === 'blocked') {
-        throw new RuntimeException('You cannot block the account you are using.');
+    if ($id === $actorId && $status !== 'active') {
+        throw new RuntimeException('You cannot block or deactivate the account you are using.');
     }
     admin_assert_admin_remains($id, $role, $status);
     if (client_count('SELECT COUNT(*) FROM users WHERE email = ? AND id <> ?', [$email, $id]) > 0) {
@@ -442,10 +458,46 @@ function admin_update_user(int $actorId, array $input): void {
     if ($studentId !== null && client_count('SELECT COUNT(*) FROM users WHERE student_id = ? AND id <> ?', [$studentId, $id]) > 0) {
         throw new RuntimeException('That student ID is already registered.');
     }
-    $stmt = get_db()->prepare('UPDATE users SET full_name = ?, email = ?, role = ?, status = ?, student_id = ?, program_department = ? WHERE id = ?');
+    $db = get_db();
+    $db->beginTransaction();
+    $stmt = $db->prepare('UPDATE users SET full_name = ?, email = ?, role = ?, status = ?, student_id = ?, program_department = ? WHERE id = ?');
     $stmt->execute([$name, $email, $role, $status, $studentId, $program, $id]);
     log_audit($actorId, 'user_updated', "user={$id}");
+    $db->commit();
     admin_finish(true, 'Account updated.', 200, 'admin-users.php');
+}
+
+function admin_deactivate_user(int $actorId, array $input): void {
+    $id = admin_user_id($input);
+    if ($id === $actorId) {
+        throw new RuntimeException('You cannot deactivate the account you are using.');
+    }
+    $user = admin_rows('SELECT role, status FROM users WHERE id = ?', [$id])[0] ?? null;
+    if (!$user) {
+        throw new RuntimeException('That account was not found.');
+    }
+    if ($user['status'] === 'inactive') {
+        throw new RuntimeException('That account is already inactive.');
+    }
+    admin_assert_admin_remains($id, (string) $user['role'], 'inactive');
+    $db = get_db();
+    $db->beginTransaction();
+    try {
+        $stmt = $db->prepare("UPDATE users SET status = 'inactive' WHERE id = ? AND status <> 'inactive'");
+        $stmt->execute([$id]);
+        if ($stmt->rowCount() !== 1) {
+            throw new RuntimeException('The account could not be deactivated.');
+        }
+        log_audit($actorId, 'user_deactivated', "user={$id}");
+        $db->commit();
+    } catch (Throwable $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        throw $e;
+    }
+    $_SESSION['admin_success'] = 'Account marked inactive. Existing records are preserved.';
+    admin_finish(true, 'Account marked inactive.', 200, 'admin-users.php');
 }
 
 function admin_reset_password(int $actorId, array $input): void {
@@ -465,8 +517,11 @@ function admin_reset_password(int $actorId, array $input): void {
     if ($fullName === '') {
         throw new RuntimeException('That account was not found.');
     }
-    $stmt = get_db()->prepare('UPDATE users SET password_hash = ?, password_is_set = 1, failed_attempts = 0, lockout_until = NULL WHERE id = ?');
+    $db = get_db();
+    $db->beginTransaction();
+    $stmt = $db->prepare('UPDATE users SET password_hash = ?, password_is_set = 1, failed_attempts = 0, lockout_until = NULL WHERE id = ?');
     $stmt->execute([password_hash($password, PASSWORD_DEFAULT), $id]);
     log_audit($actorId, 'user_password_reset', 'Password changed for user ' . $fullName);
+    $db->commit();
     admin_finish(true, 'Password reset.', 200, 'admin-users.php');
 }

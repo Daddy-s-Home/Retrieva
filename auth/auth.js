@@ -281,7 +281,13 @@ function initTotpForm() {
   const modalTitle = document.getElementById('modal-title');
   const modalDesc = document.getElementById('modal-desc');
 
-  const purpose = sessionStorage.getItem('retrieva_totp_purpose') || 'login';
+  const purpose = document.body.dataset.totpPurpose
+    || sessionStorage.getItem('retrieva_totp_purpose')
+    || 'login';
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+  const deliveryStatus = document.getElementById('totp-delivery-status');
+  const resendButton = document.getElementById('resend-code');
+  let resendTimer = null;
 
   const getCode = () => Array.from(boxes).map((b) => b.value).join('');
 
@@ -310,6 +316,43 @@ function initTotpForm() {
 
   const hideModal = () => {
     if (modal) modal.style.display = 'none';
+  };
+
+  const startResendCooldown = (seconds) => {
+    if (!resendButton) return;
+    clearInterval(resendTimer);
+    let remaining = Math.max(0, Math.ceil(Number(seconds) || 0));
+    const updateButton = () => {
+      resendButton.disabled = remaining > 0;
+      resendButton.textContent = remaining > 0 ? `Resend in ${remaining}s` : 'Resend code';
+      if (remaining === 0) clearInterval(resendTimer);
+    };
+    updateButton();
+    if (remaining > 0) {
+      resendTimer = setInterval(() => {
+        remaining -= 1;
+        updateButton();
+      }, 1000);
+    }
+  };
+
+  const requestEmailCode = async (intent) => {
+    if (!resendButton) return;
+    resendButton.disabled = true;
+    resendButton.textContent = 'Sending…';
+    if (deliveryStatus) {
+      deliveryStatus.textContent = intent === 'initial'
+        ? 'Sending a verification code to your email…'
+        : 'Requesting a new verification code…';
+    }
+    const res = await postJSON(`${API}/send_login_code.php`, { intent, csrf_token: csrfToken });
+    if (deliveryStatus) {
+      deliveryStatus.textContent = res.message || (res.success
+        ? 'A verification code was requested.'
+        : 'The verification code could not be sent.');
+    }
+    if (!res.success) showToast(res.message || 'The verification code could not be sent.', 'error');
+    startResendCooldown(res.retry_after === undefined ? 30 : res.retry_after);
   };
 
   boxes.forEach((box, i) => {
@@ -385,17 +428,14 @@ function initTotpForm() {
   });
 
   document.getElementById('resend-code')?.addEventListener('click', async (event) => {
-    const button = event.currentTarget;
-    button.disabled = true;
-    const res = await postJSON(`${API}/switch_login_factor.php`, { factor: 'email' });
-    button.disabled = false;
-    showToast(res.success ? 'A new code was sent to your email.' : (res.message || 'The code could not be sent.'), res.success ? 'success' : 'error');
+    event.preventDefault();
+    await requestEmailCode('resend');
   });
 
   document.getElementById('switch-factor')?.addEventListener('click', async (event) => {
     const button = event.currentTarget;
     button.disabled = true;
-    const res = await postJSON(`${API}/switch_login_factor.php`, { factor: button.dataset.factor });
+    const res = await postJSON(`${API}/switch_login_factor.php`, { factor: button.dataset.factor, csrf_token: csrfToken });
     if (res.success) {
       window.location.reload();
       return;
@@ -405,10 +445,15 @@ function initTotpForm() {
   });
 
   const urlCode = new URLSearchParams(window.location.search).get('code');
-  if (urlCode && /^\d{6}$/.test(urlCode.trim())) {
+  const hasPrefilledCode = Boolean(urlCode && /^\d{6}$/.test(urlCode.trim()));
+  if (hasPrefilledCode) {
     fillCode(urlCode.trim(), false);
   } else {
     boxes[0].focus();
+  }
+
+  if (resendButton && purpose === 'login' && !hasPrefilledCode) {
+    requestEmailCode('initial');
   }
 }
 
@@ -555,6 +600,7 @@ function initOAuthErrorToast() {
     oauth_failed: 'Could not complete Google sign-in.',
     domain_not_allowed: 'Only @umak.edu.ph accounts are allowed.',
     blocked: 'This account has been blocked. Contact the security office.',
+    inactive: 'This account is inactive. Contact an administrator.',
   };
   showToast(messages[error] || 'Google sign-in failed.', 'error');
 

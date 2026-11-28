@@ -29,12 +29,13 @@ $switchTo = $factor === 'totp' ? 'email' : 'totp';
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="csrf-token" content="<?= h(csrf_token()) ?>">
 <title>Two-Factor Security — Retrieva</title>
 <link rel="icon" type="image/svg+xml" href="../assets/icons/logo.svg">
 <link rel="stylesheet" href="../assets/theme.css">
 <link rel="stylesheet" href="styles.css">
 </head>
-<body class="login-page">
+<body class="login-page" data-totp-purpose="<?= $isReset ? 'password_reset' : 'login' ?>">
 
 <main class="gateway">
   <!-- Interactive Background Particles -->
@@ -71,7 +72,8 @@ $switchTo = $factor === 'totp' ? 'email' : 'totp';
         </div>
 
         <?php if ($showResend): ?>
-        <p class="totp-resend"><button type="button" class="text-link" id="resend-code">Resend</button></p>
+        <p id="totp-delivery-status" class="totp-delivery-status" role="status" aria-live="polite">Sending a verification code to your email…</p>
+        <p class="totp-resend"><button type="button" class="text-link" id="resend-code">Resend code</button></p>
         <?php endif; ?>
         <p class="totp-sync-note" style="margin-top: 14px; margin-bottom: 14px;">⏱ <?= $factor === 'totp' ? 'The authenticator code refreshes every 30 seconds' : 'Code expires in 5 minutes' ?></p>
         <button type="submit" class="btn btn-primary" style="margin-bottom: 10px;">Verify Code</button>

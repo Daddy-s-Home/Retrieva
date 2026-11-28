@@ -615,10 +615,7 @@ function client_dashboard_data(int $userId): array {
     $noteStmt->execute([$userId]);
     $notes = array_map('client_map_notification', $noteStmt->fetchAll());
 
-    $hour = (int) (new DateTime('now', new DateTimeZone('Asia/Manila')))->format('G');
-    $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
     return [
-        'greeting' => $greeting,
         'first_name' => explode(' ', trim((string) $profile['full_name']))[0] ?: 'there',
         'role_label' => ucfirst((string) $profile['role']),
         'student_id' => (string) ($profile['student_id'] ?? ''),

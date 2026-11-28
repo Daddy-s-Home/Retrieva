@@ -12,17 +12,20 @@ if (!role_is_admin_side($role)) {
 }
 
 $adminModule = $adminModule ?? 'dashboard';
-if (!isset(admin_asset_map()[$adminModule])) {
+if ($adminModule === 'users' && !role_is_administrator($role)) {
+    require_role_page(['admin'], 'index.php');
+}
+$modules = admin_visible_modules($role);
+if (!isset($modules[$adminModule])) {
     $adminModule = 'dashboard';
 }
 $payload = admin_module($adminModule, (int) $user['id'], $_GET);
 $flash = (string) ($_SESSION['admin_flash'] ?? '');
 unset($_SESSION['admin_flash']);
 $pendingClaims = client_count("SELECT COUNT(*) FROM claims WHERE status IN ('pending', 'manual_review')");
-$now = new DateTime('now', new DateTimeZone('Asia/Manila'));
-$meta = admin_asset_map()[$adminModule];
+$meta = $modules[$adminModule];
 $searchModule = $adminModule === 'dashboard' || $adminModule === 'log-found' ? 'found-items' : $adminModule;
-$searchAction = admin_asset_map()[$searchModule]['page'];
+$searchAction = $modules[$searchModule]['page'];
 $titles = [
     'dashboard' => 'Dashboard',
     'lost-reports' => 'Lost Reports',
@@ -54,7 +57,7 @@ $titles = [
 <link rel="stylesheet" href="pickup-location-dialog.css">
 <link rel="stylesheet" href="<?= h($meta['css']) ?>">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-<?php admin_prefetch_head($adminModule); ?>
+<?php admin_prefetch_head($adminModule, $role); ?>
 </head>
 <body class="client-shell admin-shell" data-page="<?= h($adminModule) ?>" data-role="<?= h($role) ?>">
 <aside class="sidebar client-sidebar" id="dashboard-sidebar">
@@ -80,6 +83,7 @@ $titles = [
         'settings' => ['settings.php', 'gear', 'Settings'],
     ];
     foreach ($nav as $id => [$href, $icon, $label]):
+        if ($id === 'users' && !role_is_administrator($role)) continue;
     ?>
       <a class="nav-item client-nav<?= $id === $adminModule ? ' active' : '' ?>" href="<?= h($href) ?>" data-module="<?= h($id) ?>">
         <?= client_icon($icon) ?>
@@ -97,8 +101,8 @@ $titles = [
   <header class="topbar client-topbar">
     <button class="topbar__menu-toggle" id="sidebar-toggle" type="button" aria-controls="dashboard-sidebar" aria-expanded="false" aria-label="Open navigation menu">☰</button>
     <form class="topbar__search" id="client-search-form" method="get" action="<?= h($searchAction) ?>" data-search-module="<?= h($searchModule) ?>" role="search">
-      <label class="visually-hidden" for="client-search"><?= h(admin_asset_map()[$searchModule]['search']) ?></label>
-      <input id="client-search" type="search" name="q" placeholder="<?= h(admin_asset_map()[$searchModule]['search']) ?>">
+      <label class="visually-hidden" for="client-search"><?= h($modules[$searchModule]['search']) ?></label>
+      <input id="client-search" type="search" name="q" placeholder="<?= h($modules[$searchModule]['search']) ?>">
     </form>
     <div class="topbar__actions">
       <div class="user-menu">
@@ -115,8 +119,8 @@ $titles = [
         </div>
       </div>
       <div class="client-clock">
-        <span><?= h($now->format('l, M j, Y')) ?></span>
-        <strong><?= h($now->format('g:i A')) ?></strong>
+        <span data-local-date>Loading date…</span>
+        <strong data-local-time>--:--</strong>
       </div>
     </div>
   </header>

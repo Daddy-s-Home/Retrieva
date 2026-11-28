@@ -19,7 +19,7 @@ const ADMIN_PAGES = [
 ];
 const ADMIN_FOUND_STATUSES = ['unclaimed', 'pending_verification', 'claimed', 'returned', 'disposed'];
 const ADMIN_ROLES = ['admin', 'security', 'professor', 'student'];
-const ADMIN_USER_STATUSES = ['active', 'blocked'];
+const ADMIN_USER_STATUSES = ['active', 'blocked', 'inactive'];
 
 function admin_guard(): array {
     return require_role(RETRIEVA_ADMIN_ROLES);
@@ -533,8 +533,18 @@ function admin_returned_data(array $query): array {
     ];
 }
 
-function admin_users_data(array $query): array {
+function admin_users_data(array $query, ?int $actorId = null): array {
     $filters = admin_filters($query);
+    $role = (string) ($query['role'] ?? '');
+    $status = (string) ($query['status'] ?? '');
+    if ($role === '' && in_array($status, ADMIN_ROLES, true)) {
+        $role = $status;
+        $status = '';
+    }
+    $role = in_array($role, ADMIN_ROLES, true) ? $role : '';
+    $status = in_array($status, ADMIN_USER_STATUSES, true) ? $status : '';
+    $filters['role'] = $role;
+    $filters['status'] = $status;
     $where = ['1=1'];
     $params = [];
     if ($filters['q'] !== '') {
@@ -542,9 +552,13 @@ function admin_users_data(array $query): array {
         $like = admin_like($filters['q']);
         array_push($params, $like, $like, $like, $like);
     }
-    if (in_array($filters['status'], ADMIN_ROLES, true)) {
+    if ($role !== '') {
         $where[] = 'role = ?';
-        $params[] = $filters['status'];
+        $params[] = $role;
+    }
+    if ($status !== '') {
+        $where[] = 'status = ?';
+        $params[] = $status;
     }
     $sqlWhere = implode(' AND ', $where);
     $total = client_count("SELECT COUNT(*) FROM users WHERE $sqlWhere", $params);
@@ -558,7 +572,10 @@ function admin_users_data(array $query): array {
     foreach (ADMIN_ROLES as $role) {
         $counts[$role] = client_count('SELECT COUNT(*) FROM users WHERE role = ?', [$role]);
     }
-    return compact('filters', 'rows', 'total', 'counts') + ['pages' => (int) max(1, ceil($total / $perPage))];
+    return compact('filters', 'rows', 'total', 'counts') + [
+        'pages' => (int) max(1, ceil($total / $perPage)),
+        'actor_id' => $actorId,
+    ];
 }
 
 function admin_reports_data(array $query): array {
@@ -681,7 +698,7 @@ function admin_module(string $module, int $userId, array $query): array {
         'claims' => admin_claims_data($query),
         'pickup' => admin_pickup_data($query),
         'returned' => admin_returned_data($query),
-        'users' => admin_users_data($query),
+        'users' => admin_users_data($query, $userId),
         'reports' => admin_reports_data($query),
         'audit' => admin_audit_data($query),
         'settings' => admin_settings_data($userId),

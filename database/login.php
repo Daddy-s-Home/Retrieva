@@ -1,25 +1,41 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/totp_helper.php';
-require_once __DIR__ . '/mailer.php';
 require_once __DIR__ . '/notify_helper.php';
 require_once __DIR__ . '/recaptcha_helper.php';
 
 start_session();
-header('Content-Type: application/json');
+$formPost = $_SERVER['REQUEST_METHOD'] === 'POST'
+    && !str_contains((string) ($_SERVER['CONTENT_TYPE'] ?? ''), 'application/json');
+if (!$formPost) {
+    header('Content-Type: application/json');
+}
 
-$input          = json_decode(file_get_contents('php://input'), true) ?? [];
+$input = $formPost ? $_POST : json_decode(file_get_contents('php://input') ?: '', true);
+$input = is_array($input) ? $input : [];
 $email          = trim((string)($input['email'] ?? ''));
 $password       = (string)($input['password'] ?? '');
-$recaptchaToken = (string)($input['recaptcha_token'] ?? '');
+$recaptchaToken = (string)($input['recaptcha_token'] ?? $input['g-recaptcha-response'] ?? '');
+
+function login_response(bool $formPost, array $payload, int $status = 200): void {
+    if ($formPost) {
+        if (!empty($payload['success'])) {
+            header('Location: ../auth/totp.php');
+            exit;
+        }
+        $_SESSION['login_error'] = (string) ($payload['message'] ?? 'Sign in failed.');
+        header('Location: ../auth/login.php');
+        exit;
+    }
+    json_out($payload, $status);
+}
 
 if ($email === '' || $password === '') {
-    json_out(['success' => false, 'message' => 'Email and password are required.'], 400);
+    login_response($formPost, ['success' => false, 'message' => 'Email and password are required.'], 400);
 }
 
 if (!verify_recaptcha_token($recaptchaToken)) {
-    json_out(['success' => false, 'message' => 'reCAPTCHA verification failed. Please complete the checkbox and try again.'], 400);
+    login_response($formPost, ['success' => false, 'message' => 'reCAPTCHA verification failed. Please complete the checkbox and try again.'], 400);
 }
 
 $db = get_db();
@@ -35,14 +51,18 @@ if (!$user) {
     // #endregion
     log_audit(null, 'login_failed', "Unknown account login attempt for email: {$email}");
     notify_roles(['admin'], 'system', 'Failed Login Attempt', "Unknown account login attempt for {$email}.", 'user', null, 'warning');
-    json_out(['success' => false, 'message' => $invalidMsg], 401);
+    login_response($formPost, ['success' => false, 'message' => $invalidMsg], 401);
 }
 
 // 1. Admin manual block check
 if ($user['status'] === 'blocked') {
     log_audit((int)$user['id'], 'login_blocked', 'Blocked user login attempt');
     notify_roles(['admin'], 'system', 'Blocked Account Attempt', "Blocked user {$user['email']} attempted to sign in.", 'user', (int)$user['id'], 'danger');
-    json_out(['success' => false, 'message' => 'This account has been blocked. Contact the security office.'], 403);
+    login_response($formPost, ['success' => false, 'message' => 'This account has been blocked. Contact the security office.'], 403);
+}
+if ($user['status'] === 'inactive') {
+    log_audit((int)$user['id'], 'login_inactive', 'Inactive account login attempt');
+    login_response($formPost, ['success' => false, 'message' => 'This account is inactive. Contact an administrator.'], 403);
 }
 
 // Helper function to format seconds into readable text (e.g., "14 minute(s) and 35 second(s)")
@@ -69,7 +89,7 @@ if (!empty($user['lockout_until'])) {
         
         $readableTime = format_lockout_time($remainingSeconds);
 
-        json_out([
+        login_response($formPost, [
             'success'           => false,
             'locked'            => true,
             'remaining_seconds' => $remainingSeconds,
@@ -100,7 +120,7 @@ if (!$passwordOk) {
         log_audit((int)$user['id'], 'account_locked', 'Account locked for 15 minutes due to 5 consecutive failed login attempts.');
         notify_roles(['admin'], 'system', 'Account Locked', "{$user['email']} was locked for 15 minutes after 5 failed login attempts.", 'user', (int)$user['id'], 'danger');
         
-        json_out([
+        login_response($formPost, [
             'success'           => false,
             'locked'            => true,
             'remaining_seconds' => 900,
@@ -114,7 +134,7 @@ if (!$passwordOk) {
         log_audit((int)$user['id'], 'login_failed', "Invalid password attempt ({$failedAttempts}/5)");
         notify_roles(['admin'], 'system', 'Failed Login Attempt', "Invalid password for {$user['email']} ({$failedAttempts}/5 attempts).", 'user', (int)$user['id'], 'warning');
         
-        json_out([
+        login_response($formPost, [
             'success' => false,
             'message' => "{$invalidMsg} ({$remainingTries} attempt" . ($remainingTries > 1 ? 's' : '') . " remaining)"
         ], 401);
@@ -130,24 +150,12 @@ $useAuthenticator = ($user['login_method'] ?? 'email') === 'totp' && (int) $user
 $_SESSION['pending_totp_user_id'] = $user['id'];
 $_SESSION['pending_login_factor'] = $useAuthenticator ? 'totp' : 'email';
 $_SESSION['pending_login_can_switch'] = (int) $user['totp_enabled'] === 1;
+unset($_SESSION['pending_login_email_requested_at']);
 
 if ($useAuthenticator) {
     log_audit((int)$user['id'], 'login_password_ok', 'Password verified, authenticator code requested.');
-    json_out(['success' => true, 'factor' => 'totp', 'message' => 'Enter the 6-digit code from your authenticator app.']);
+    login_response($formPost, ['success' => true, 'factor' => 'totp', 'message' => 'Enter the 6-digit code from your authenticator app.']);
 }
 
-$secret = totp_generate_secret();
-$code   = totp_code($secret);
-$db->prepare(
-    'INSERT INTO totp_challenges (user_id, code_hash, purpose, expires_at) VALUES (?, ?, "login", DATE_ADD(NOW(), INTERVAL 5 MINUTE))'
-)->execute([$user['id'], password_hash($code, PASSWORD_BCRYPT)]);
-
-try {
-    send_totp_email($user['email'], $code);
-} catch (Throwable $e) {
-    error_log("Failed to dispatch TOTP email: " . $e->getMessage());
-}
-
-log_audit((int)$user['id'], 'login_password_ok', 'Password verified, email code sent.');
-
-json_out(['success' => true, 'factor' => 'email', 'message' => 'Enter the 6-digit code sent to your email.']);
+log_audit((int)$user['id'], 'login_password_ok', 'Password verified, email verification pending.');
+login_response($formPost, ['success' => true, 'factor' => 'email', 'message' => 'Enter the 6-digit code we are sending to your email.']);

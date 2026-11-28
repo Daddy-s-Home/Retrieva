@@ -6,6 +6,7 @@ require_once __DIR__ . '/db.php';
 $session = require_login();
 $userId = (int)$session['user_id'];
 $db = get_db();
+header('Cache-Control: private, no-store');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true) ?? [];

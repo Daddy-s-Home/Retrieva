@@ -67,6 +67,10 @@ if (!$user) {
         header('Location: ../auth/login.php?error=blocked');
         exit;
     }
+    if ($user['status'] === 'inactive') {
+        header('Location: ../auth/login.php?error=inactive');
+        exit;
+    }
     // Keep Google identity fields fresh (avatar can change over time).
     $db->prepare('UPDATE users SET google_id = ?, avatar_url = ? WHERE id = ?')
        ->execute([$googleUser->getId(), $googleUser->getAvatar() ?: $user['avatar_url'], $user['id']]);

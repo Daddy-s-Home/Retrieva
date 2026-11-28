@@ -32,10 +32,10 @@ $db = get_db();
 $factor = $_SESSION['pending_login_factor'] ?? 'email';
 
 if ($purpose === 'login' && $factor === 'totp') {
-    $user = $db->prepare('SELECT id, role, full_name, totp_secret, totp_enabled FROM users WHERE id = ?');
+    $user = $db->prepare('SELECT id, role, full_name, totp_secret, totp_enabled, status FROM users WHERE id = ?');
     $user->execute([$userId]);
     $u = $user->fetch();
-    if (!$u || (int) $u['totp_enabled'] !== 1 || !totp_verify((string) $u['totp_secret'], $code)) {
+    if (!$u || $u['status'] !== 'active' || (int) $u['totp_enabled'] !== 1 || !totp_verify((string) $u['totp_secret'], $code)) {
         json_out(['success' => false, 'message' => 'Incorrect or expired code.'], 401);
     }
     retrieva_start_login_session($db, $u);
@@ -56,9 +56,12 @@ if (!$challenge || !password_verify($code, $challenge['code_hash'])) {
 $db->prepare('UPDATE totp_challenges SET consumed_at = NOW() WHERE id = ?')->execute([$challenge['id']]);
 
 if ($purpose === 'login') {
-    $user = $db->prepare('SELECT id, role, full_name FROM users WHERE id = ?');
+    $user = $db->prepare('SELECT id, role, full_name, status FROM users WHERE id = ?');
     $user->execute([$userId]);
     $u = $user->fetch();
+    if (!$u || $u['status'] !== 'active') {
+        json_out(['success' => false, 'message' => 'This account cannot complete sign-in.'], 403);
+    }
     retrieva_start_login_session($db, $u);
 }
 
@@ -73,7 +76,12 @@ function retrieva_start_login_session(PDO $db, array $u): void {
     $_SESSION['user_id'] = $u['id'];
     $_SESSION['role']    = $u['role'];
     $_SESSION['name']    = $u['full_name'];
-    unset($_SESSION['pending_totp_user_id'], $_SESSION['pending_login_factor'], $_SESSION['pending_login_can_switch']);
+    unset(
+        $_SESSION['pending_totp_user_id'],
+        $_SESSION['pending_login_factor'],
+        $_SESSION['pending_login_can_switch'],
+        $_SESSION['pending_login_email_requested_at']
+    );
 
     $_SESSION['pending_notif'] = [
         'title'   => 'User Activity',
